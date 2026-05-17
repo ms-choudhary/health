@@ -17,9 +17,9 @@ RUN CGO_ENABLED=0 go build -o /server .
 # Stage 3: final image
 FROM alpine:3.21
 RUN apk add --no-cache ca-certificates tzdata
-WORKDIR /app
+WORKDIR /app/backend
 COPY --from=backend /server ./server
-COPY --from=frontend /app/frontend/dist ./frontend/dist
+COPY --from=frontend /app/frontend/dist /app/frontend/dist
 
 EXPOSE 8080
 
