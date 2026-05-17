@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calorie Tracker — Design Preview</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #fafafa;
+    --surface: #ffffff;
+    --border: #e4e4e7;
+    --muted: #f4f4f5;
+    --muted-fg: #71717a;
+    --fg: #09090b;
+    --primary: #18181b;
+    --primary-fg: #fafafa;
+    --blue: #3b82f6;
+    --blue-light: #eff6ff;
+    --amber: #f59e0b;
+    --green: #10b981;
+    --red: #ef4444;
+    --radius: 12px;
+    --shadow: 0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.05);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  /* ── Tab bar (demo nav) ── */
+  .tab-bar {
+    display: flex;
+    gap: 2px;
+    padding: 12px 12px 0;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+  }
+  .tab-bar::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    padding: 7px 14px;
+    border-radius: var(--radius) var(--radius) 0 0;
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--muted-fg);
+    white-space: nowrap;
+    transition: all .15s;
+  }
+  .tab-btn.active {
+    background: var(--surface);
+    border-color: var(--border);
+    border-bottom-color: var(--surface);
+    color: var(--fg);
+    font-weight: 600;
+    margin-bottom: -1px;
+  }
+
+  /* ── Screens ── */
+  .screen { display: none; padding: 20px 16px 40px; max-width: 480px; margin: 0 auto; }
+  .screen.active { display: flex; flex-direction: column; gap: 16px; }
+
+  /* ── Card ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .card-header { padding: 14px 14px 0; }
+  .card-title { font-size: 13px; font-weight: 600; color: var(--muted-fg); text-transform: uppercase; letter-spacing: .04em; }
+  .card-body { padding: 14px; }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 8px 16px;
+    border-radius: var(--radius);
+    border: 1px solid transparent;
+    font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: all .15s;
+  }
+  .btn-primary   { background: var(--primary); color: var(--primary-fg); border-color: var(--primary); }
+  .btn-primary:hover { opacity: .85; }
+  .btn-outline   { background: transparent; border-color: var(--border); color: var(--fg); }
+  .btn-outline:hover { background: var(--muted); }
+  .btn-ghost     { background: transparent; border-color: transparent; color: var(--muted-fg); }
+  .btn-ghost:hover   { background: var(--muted); color: var(--fg); }
+  .btn-sm        { padding: 5px 11px; font-size: 12px; border-radius: 8px; }
+  .btn-icon      { padding: 6px; width: 32px; height: 32px; border-radius: 8px; }
+  .btn-full      { width: 100%; }
+  .btn:disabled  { opacity: .3; cursor: not-allowed; }
+
+  /* ── Input ── */
+  .input {
+    width: 100%; padding: 8px 12px;
+    border: 1px solid var(--border); border-radius: 8px;
+    font-size: 14px; background: var(--surface); color: var(--fg);
+    outline: none; transition: border-color .15s;
+  }
+  .input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(59,130,246,.1); }
+  .input-wrap { position: relative; }
+  .input-icon { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--muted-fg); pointer-events: none; }
+
+  /* ── Avatar ── */
+  .avatar {
+    width: 42px; height: 42px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px; flex-shrink: 0;
+  }
+  .av-1 { background: #dbeafe; color: #1d4ed8; }
+  .av-2 { background: #fce7f3; color: #be185d; }
+  .av-3 { background: #d1fae5; color: #065f46; }
+
+  /* ── Table ── */
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted-fg);
+       padding: 9px 12px; border-bottom: 1px solid var(--border); }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  tr:last-child td { border-bottom: none; }
+  .td-r  { text-align: right; }
+  .td-xs { width: 32px; text-align: center; }
+  .del-btn {
+    background: none; border: none; color: var(--muted-fg); cursor: pointer;
+    font-size: 16px; padding: 2px 5px; border-radius: 6px; line-height: 1;
+  }
+  .del-btn:hover { background: #fee2e2; color: var(--red); }
+
+  /* ── Badge ── */
+  .badge {
+    display: inline-block; padding: 2px 9px; border-radius: 999px;
+    font-size: 11px; font-weight: 500;
+  }
+  .badge-muted { background: var(--muted); color: var(--muted-fg); }
+  .badge-blue  { background: var(--blue-light); color: var(--blue); }
+  .badge-amber { background: #fef3c7; color: #92400e; }
+
+  /* ── Section label ── */
+  .section-label {
+    font-size: 11px; font-weight: 700; color: var(--muted-fg);
+    text-transform: uppercase; letter-spacing: .07em;
+  }
+
+  /* ── Date nav ── */
+  .date-nav { display: flex; align-items: center; justify-content: space-between; }
+  .date-label { font-weight: 600; font-size: 15px; }
+
+  /* ── Total row ── */
+  .total-row { display: flex; justify-content: space-between; padding: 11px 12px; font-weight: 600; font-size: 14px; }
+
+  /* ── Metric row ── */
+  .metric-row { display: flex; align-items: center; gap: 10px; }
+  .metric-label { width: 110px; font-size: 13px; color: var(--muted-fg); }
+
+  /* ── Food item ── */
+  .food-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--surface); cursor: pointer; transition: background .1s;
+  }
+  .food-item:hover { background: var(--muted); }
+  .food-name  { font-size: 14px; font-weight: 500; }
+  .food-meta  { font-size: 12px; color: var(--muted-fg); margin-top: 1px; }
+
+  /* ── Period toggle ── */
+  .period-toggle { display: flex; gap: 5px; }
+
+  /* ── SVG Charts ── */
+  .chart-wrap { height: 130px; position: relative; }
+  svg.chart { width: 100%; height: 100%; }
+
+  /* ── Donut ── */
+  .donut-wrap { position: relative; display: inline-flex; }
+
+  /* ── User card ── */
+  .user-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px; border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--surface); cursor: pointer; transition: background .1s;
+    box-shadow: var(--shadow);
+  }
+  .user-card:hover { background: var(--muted); }
+  .user-info { flex: 1; }
+  .user-name { font-weight: 600; font-size: 15px; }
+  .user-sub  { font-size: 12px; color: var(--muted-fg); margin-top: 1px; }
+
+  /* ── Page header ── */
+  .page-header { display: flex; align-items: center; gap: 10px; margin-bottom: 2px; }
+  .page-title  { font-size: 20px; font-weight: 700; letter-spacing: -.3px; }
+
+  /* ── Add food drawer (overlay) ── */
+  .drawer-backdrop {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 40;
+  }
+  .drawer-backdrop.open { display: block; }
+  .drawer {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    max-width: 480px; margin: 0 auto;
+    background: var(--surface); border-top: 1px solid var(--border);
+    border-radius: 20px 20px 0 0;
+    padding: 20px 16px 32px;
+    display: flex; flex-direction: column; gap: 14px;
+    max-height: 80vh; overflow-y: auto;
+  }
+  .drawer-handle {
+    width: 36px; height: 4px; background: var(--border);
+    border-radius: 2px; margin: 0 auto 4px;
+  }
+
+  /* ── Recent item in drawer ── */
+  .recent-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+    cursor: pointer; transition: background .1s;
+  }
+  .recent-item:hover { background: var(--muted); }
+
+  /* ── Responsive ── */
+  @media (min-width: 640px) {
+    .screen { padding: 24px 20px 48px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Demo tab bar -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="show('home')">1 · Home</button>
+  <button class="tab-btn" onclick="show('user')">2 · User Page</button>
+  <button class="tab-btn" onclick="show('library')">3 · Food Library</button>
+  <button class="tab-btn" onclick="show('drawer')">4 · Add Food</button>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 1 · Home — user list + donut charts
+═══════════════════════════════════════════ -->
+<section id="screen-home" class="screen active">
+  <div style="display:flex;align-items:center;justify-content:space-between;">
+    <h1 class="page-title">Health Tracker</h1>
+    <button class="btn btn-outline btn-sm" onclick="show('library')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+      </svg>
+      Food Library
+    </button>
+  </div>
+
+  <!-- User 1 -->
+  <div class="user-card" onclick="show('user')">
+    <div class="avatar av-1">MK</div>
+    <div class="user-info">
+      <div class="user-name">Mohit</div>
+      <div class="user-sub">994 / 2 000 kcal today</div>
+    </div>
+    <!-- Donut: 994/2000 = 49.7% -->
+    <svg width="52" height="52" viewBox="0 0 52 52">
+      <circle cx="26" cy="26" r="20" fill="none" stroke="var(--muted)" stroke-width="6"/>
+      <circle cx="26" cy="26" r="20" fill="none" stroke="var(--blue)" stroke-width="6"
+              stroke-dasharray="62.5 125.7" stroke-linecap="round"
+              transform="rotate(-90 26 26)"/>
+      <text x="26" y="30" text-anchor="middle" font-size="9" font-weight="700" fill="var(--fg)">50%</text>
+    </svg>
+  </div>
+
+  <!-- User 2 -->
+  <div class="user-card" onclick="show('user')">
+    <div class="avatar av-2">SR</div>
+    <div class="user-info">
+      <div class="user-name">Sara</div>
+      <div class="user-sub">1 640 / 1 800 kcal today</div>
+    </div>
+    <!-- Donut: 1640/1800 = 91% → amber -->
+    <svg width="52" height="52" viewBox="0 0 52 52">
+      <circle cx="26" cy="26" r="20" fill="none" stroke="var(--muted)" stroke-width="6"/>
+      <circle cx="26" cy="26" r="20" fill="none" stroke="var(--amber)" stroke-width="6"
+              stroke-dasharray="114.4 125.7" stroke-linecap="round"
+              transform="rotate(-90 26 26)"/>
+      <text x="26" y="30" text-anchor="middle" font-size="9" font-weight="700" fill="var(--fg)">91%</text>
+    </svg>
+  </div>
+
+  <button class="btn btn-outline btn-full" style="gap:8px;">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+    Add user
+  </button>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 2 · User Page — Log + Progress
+═══════════════════════════════════════════ -->
+<section id="screen-user" class="screen">
+
+  <!-- Header -->
+  <div class="page-header">
+    <button class="btn btn-ghost btn-icon" onclick="show('home')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+    </button>
+    <span class="page-title">Mohit</span>
+  </div>
+
+  <!-- ─── LOG SECTION ─── -->
+  <span class="section-label">Log</span>
+
+  <!-- Date nav -->
+  <div class="date-nav">
+    <button class="btn btn-ghost btn-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+    </button>
+    <span class="date-label">17 May 2026</span>
+    <button class="btn btn-ghost btn-icon" disabled title="Today — cannot go forward">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
+  </div>
+
+  <!-- Food table -->
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Food</th>
+          <th class="td-r" style="width:52px;">Qty</th>
+          <th class="td-r" style="width:58px;">Cal</th>
+          <th class="td-xs"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <div class="food-name">Oatmeal</div>
+            <div class="food-meta">g</div>
+          </td>
+          <td class="td-r">80</td>
+          <td class="td-r">310</td>
+          <td class="td-xs"><button class="del-btn">×</button></td>
+        </tr>
+        <tr>
+          <td>
+            <div class="food-name">Banana</div>
+            <div class="food-meta">piece</div>
+          </td>
+          <td class="td-r">1</td>
+          <td class="td-r">89</td>
+          <td class="td-xs"><button class="del-btn">×</button></td>
+        </tr>
+        <tr>
+          <td>
+            <div class="food-name">Grilled Chicken</div>
+            <div class="food-meta">g</div>
+          </td>
+          <td class="td-r">150</td>
+          <td class="td-r">248</td>
+          <td class="td-xs"><button class="del-btn">×</button></td>
+        </tr>
+        <tr>
+          <td>
+            <div class="food-name">Brown Rice</div>
+            <div class="food-meta">g</div>
+          </td>
+          <td class="td-r">200</td>
+          <td class="td-r">260</td>
+          <td class="td-xs"><button class="del-btn">×</button></td>
+        </tr>
+        <tr>
+          <td>
+            <div class="food-name">Almonds</div>
+            <div class="food-meta">g</div>
+          </td>
+          <td class="td-r">20</td>
+          <td class="td-r">116</td>
+          <td class="td-xs"><button class="del-btn">×</button></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="total-row">
+      <span>Total</span>
+      <span style="color:var(--blue)">1 023 kcal</span>
+    </div>
+  </div>
+
+  <button class="btn btn-outline btn-full" onclick="show('drawer')">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+    Add food
+  </button>
+
+  <!-- Weight / Steps / Target -->
+  <div class="card">
+    <div class="card-body" style="display:flex;flex-direction:column;gap:12px;">
+      <div class="metric-row">
+        <span class="metric-label">Weight</span>
+        <input class="input" type="number" value="74.2" style="max-width:110px;">
+        <span style="font-size:12px;color:var(--muted-fg);">kg</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Steps</span>
+        <input class="input" type="number" value="8450" style="max-width:110px;">
+        <span style="font-size:12px;color:var(--muted-fg);">steps</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Target calories</span>
+        <input class="input" type="number" value="2000" style="max-width:110px;">
+        <span style="font-size:12px;color:var(--muted-fg);">kcal</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── PROGRESS SECTION ─── -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
+    <span class="section-label">Progress</span>
+    <div class="period-toggle">
+      <button class="btn btn-primary btn-sm" id="p-w" onclick="setPeriod('w')">W</button>
+      <button class="btn btn-outline btn-sm" id="p-m" onclick="setPeriod('m')">M</button>
+      <button class="btn btn-outline btn-sm" id="p-yr" onclick="setPeriod('yr')">Yr</button>
+    </div>
+  </div>
+
+  <!-- Calories chart (consumed + target line) -->
+  <div class="card">
+    <div class="card-header" style="padding-bottom:10px;">
+      <div class="card-title">Calories</div>
+      <div style="display:flex;gap:14px;margin-top:6px;">
+        <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted-fg);">
+          <span style="display:inline-block;width:16px;height:2px;background:var(--blue);border-radius:1px;"></span> Consumed
+        </span>
+        <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted-fg);">
+          <span style="display:inline-block;width:16px;height:0;border-top:2px dashed var(--amber);"></span> Target
+        </span>
+      </div>
+    </div>
+    <div class="card-body" style="padding-top:0;">
+      <div class="chart-wrap"><svg class="chart" id="cal-chart" viewBox="0 0 400 120" preserveAspectRatio="none"></svg></div>
+    </div>
+  </div>
+
+  <!-- Weight chart -->
+  <div class="card">
+    <div class="card-header" style="padding-bottom:10px;"><div class="card-title">Weight (kg)</div></div>
+    <div class="card-body" style="padding-top:0;">
+      <div class="chart-wrap"><svg class="chart" id="weight-chart" viewBox="0 0 400 120" preserveAspectRatio="none"></svg></div>
+    </div>
+  </div>
+
+  <!-- Steps chart -->
+  <div class="card">
+    <div class="card-header" style="padding-bottom:10px;"><div class="card-title">Steps</div></div>
+    <div class="card-body" style="padding-top:0;">
+      <div class="chart-wrap"><svg class="chart" id="steps-chart" viewBox="0 0 400 120" preserveAspectRatio="none"></svg></div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 3 · Shared Food Library
+═══════════════════════════════════════════ -->
+<section id="screen-library" class="screen">
+  <div class="page-header">
+    <button class="btn btn-ghost btn-icon" onclick="show('home')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+    </button>
+    <span class="page-title">Food Library</span>
+  </div>
+
+  <div class="input-wrap">
+    <input class="input" type="search" placeholder="Search food…" oninput="filterLibrary(this.value)">
+    <span class="input-icon">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    </span>
+  </div>
+
+  <div id="lib-list" style="display:flex;flex-direction:column;gap:8px;">
+    <div class="food-item" data-name="Oatmeal">
+      <div>
+        <div class="food-name">Oatmeal</div>
+        <div class="food-meta">3.9 kcal / 1 g</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="badge badge-muted">g</span>
+        <button class="del-btn" title="Delete">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="food-item" data-name="Banana">
+      <div>
+        <div class="food-name">Banana</div>
+        <div class="food-meta">89 kcal / 1 piece</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="badge badge-muted">piece</span>
+        <button class="del-btn" title="Delete">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="food-item" data-name="Grilled Chicken">
+      <div>
+        <div class="food-name">Grilled Chicken</div>
+        <div class="food-meta">1.65 kcal / 1 g</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="badge badge-muted">g</span>
+        <button class="del-btn" title="Delete">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="food-item" data-name="Brown Rice">
+      <div>
+        <div class="food-name">Brown Rice</div>
+        <div class="food-meta">1.3 kcal / 1 g</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="badge badge-muted">g</span>
+        <button class="del-btn" title="Delete">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="food-item" data-name="Almonds">
+      <div>
+        <div class="food-name">Almonds</div>
+        <div class="food-meta">5.8 kcal / 1 g</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="badge badge-muted">g</span>
+        <button class="del-btn" title="Delete">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="food-item" data-name="Greek Yogurt">
+      <div>
+        <div class="food-name">Greek Yogurt</div>
+        <div class="food-meta">0.67 kcal / 1 ml</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="badge badge-muted">ml</span>
+        <button class="del-btn" title="Delete">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="food-item" data-name="Olive Oil">
+      <div>
+        <div class="food-name">Olive Oil</div>
+        <div class="food-meta">8.8 kcal / 1 ml</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="badge badge-muted">ml</span>
+        <button class="del-btn" title="Delete">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary btn-full">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+    Add food
+  </button>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 4 · Add Food Drawer (static preview)
+═══════════════════════════════════════════ -->
+<section id="screen-drawer" class="screen">
+  <div class="page-header">
+    <button class="btn btn-ghost btn-icon" onclick="show('user')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+    </button>
+    <span class="page-title" style="font-size:15px;font-weight:600;">Add Food (drawer preview)</span>
+  </div>
+
+  <!-- Drawer rendered inline for demo -->
+  <div class="card" style="border-radius:16px;">
+    <div class="card-body" style="display:flex;flex-direction:column;gap:14px;">
+      <div class="drawer-handle"></div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-weight:600;">Add food</span>
+        <button class="btn btn-ghost btn-icon" onclick="show('user')">×</button>
+      </div>
+
+      <!-- Search -->
+      <div class="input-wrap">
+        <input class="input" type="search" placeholder="Search food library…">
+        <span class="input-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        </span>
+      </div>
+
+      <!-- ── State A: no search → show recent history ── -->
+      <div>
+        <div class="section-label" style="margin-bottom:8px;">Recent (your history)</div>
+        <div style="display:flex;flex-direction:column;gap:7px;">
+
+          <div class="recent-item" onclick="showQtyPicker(this)">
+            <div>
+              <div class="food-name">Oatmeal</div>
+              <div class="food-meta">80 g · 310 kcal last time</div>
+            </div>
+            <span class="badge badge-blue">310</span>
+          </div>
+
+          <div class="recent-item" onclick="showQtyPicker(this)">
+            <div>
+              <div class="food-name">Grilled Chicken</div>
+              <div class="food-meta">150 g · 248 kcal last time</div>
+            </div>
+            <span class="badge badge-blue">248</span>
+          </div>
+
+          <div class="recent-item" onclick="showQtyPicker(this)">
+            <div>
+              <div class="food-name">Brown Rice</div>
+              <div class="food-meta">200 g · 260 kcal last time</div>
+            </div>
+            <span class="badge badge-blue">260</span>
+          </div>
+
+          <div class="recent-item" onclick="showQtyPicker(this)">
+            <div>
+              <div class="food-name">Banana</div>
+              <div class="food-meta">1 piece · 89 kcal last time</div>
+            </div>
+            <span class="badge badge-blue">89</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── State B: item picked → quantity input (hidden by default) ── -->
+      <div id="qty-picker" style="display:none;background:var(--muted);border-radius:10px;padding:12px;flex-direction:column;gap:10px;">
+        <div style="font-weight:600;font-size:14px;" id="qty-food-name">Oatmeal</div>
+        <div style="font-size:12px;color:var(--muted-fg);" id="qty-food-meta">3.9 kcal / 1 g</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input class="input" type="number" id="qty-input" value="80" style="max-width:100px;">
+          <span style="font-size:13px;color:var(--muted-fg);" id="qty-unit">g</span>
+          <button class="btn btn-primary" style="margin-left:auto;" onclick="hideQtyPicker()">Add →</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div style="font-size:12px;color:var(--muted-fg);text-align:center;padding:4px 0;">
+    Tap a recent item to pre-fill qty · Search to browse the full library
+  </div>
+</section>
+
+<script>
+/* ── Tab switching ── */
+const screenNames = ['home','user','library','drawer'];
+function show(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', screenNames[i] === name);
+  });
+  document.getElementById('screen-' + name).classList.add('active');
+  if (name === 'user') drawCharts('w');
+}
+
+/* ── Library search ── */
+function filterLibrary(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('#lib-list .food-item').forEach(el => {
+    el.style.display = el.dataset.name.toLowerCase().includes(q) ? 'flex' : 'none';
+  });
+}
+
+/* ── Period toggle ── */
+function setPeriod(p) {
+  ['w','m','yr'].forEach(x => {
+    const btn = document.getElementById('p-' + x);
+    if (btn) btn.className = 'btn btn-sm ' + (x === p ? 'btn-primary' : 'btn-outline');
+  });
+  drawCharts(p);
+}
+
+/* ── Qty picker in Add Food drawer ── */
+function showQtyPicker(el) {
+  const name = el.querySelector('.food-name').textContent;
+  document.getElementById('qty-food-name').textContent = name;
+  const picker = document.getElementById('qty-picker');
+  picker.style.display = 'flex';
+  picker.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function hideQtyPicker() {
+  document.getElementById('qty-picker').style.display = 'none';
+  show('user');
+}
+
+/* ══════════════════════════════════
+   SVG Chart helpers
+══════════════════════════════════ */
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function buildPath(pts) {
+  if (pts.length === 0) return '';
+  let d = `M${pts[0].x},${pts[0].y}`;
+  for (let i = 1; i < pts.length; i++) {
+    const cp1x = pts[i-1].x + (pts[i].x - pts[i-1].x) * 0.4;
+    const cp2x = pts[i].x   - (pts[i].x - pts[i-1].x) * 0.4;
+    d += ` C${cp1x},${pts[i-1].y} ${cp2x},${pts[i].y} ${pts[i].x},${pts[i].y}`;
+  }
+  return d;
+}
+
+function drawLineChart(id, datasets, W=400, H=120, pad=12) {
+  const svg = document.getElementById(id);
+  if (!svg) return;
+  const allVals = datasets.flatMap(d => d.data.filter(v => v != null));
+  const min = Math.min(...allVals);
+  const max = Math.max(...allVals);
+  const range = (max - min) || 1;
+  const n = datasets[0].data.length;
+
+  const toX = i => pad + (i / (n - 1)) * (W - pad*2);
+  const toY = v => H - pad - ((v - min) / range) * (H - pad*2);
+
+  let html = '';
+  for (const ds of datasets) {
+    const pts = ds.data.map((v, i) => ({ x: toX(i), y: toY(v) }));
+    const path = buildPath(pts);
+    const dashAttr = ds.dashed ? 'stroke-dasharray="6 4"' : '';
+    // area fill only for non-dashed
+    if (!ds.dashed) {
+      const area = `${path} L${toX(n-1)},${H} L${pad},${H} Z`;
+      html += `<path d="${area}" fill="${ds.color}" fill-opacity=".08"/>`;
+    }
+    html += `<path d="${path}" fill="none" stroke="${ds.color}" stroke-width="2.2" ${dashAttr} stroke-linecap="round" stroke-linejoin="round"/>`;
+    // dots
+    pts.forEach(p => {
+      html += `<circle cx="${p.x}" cy="${p.y}" r="2.8" fill="${ds.color}"/>`;
+    });
+  }
+  svg.innerHTML = html;
+}
+
+function drawBarChart(id, data, color, W=400, H=120, pad=12) {
+  const svg = document.getElementById(id);
+  if (!svg) return;
+  const max = Math.max(...data) || 1;
+  const n = data.length;
+  const gap = 3;
+  const barW = Math.max(6, (W - pad*2) / n - gap);
+
+  const html = data.map((v, i) => {
+    const x = pad + i * ((W - pad*2) / n);
+    const bh = ((v / max) * (H - pad*2));
+    const y = H - pad - bh;
+    return `<rect x="${x}" y="${y}" width="${barW}" height="${bh}" rx="3" fill="${color}" fill-opacity=".75"/>`;
+  }).join('');
+  svg.innerHTML = html;
+}
+
+function randArr(n, base, spread) {
+  return Array.from({length:n}, (_, i) => base + (Math.random()-0.5)*spread - i*(spread*0.04));
+}
+
+function drawCharts(period='w') {
+  const n = period === 'w' ? 7 : period === 'm' ? 30 : 12;
+  const cal     = randArr(n, 1600, 600);
+  const target  = Array(n).fill(2000);
+  const weight  = randArr(n, 74.5, 1.5);
+  const steps   = Array.from({length:n}, () => 4000 + Math.random()*9000);
+
+  drawLineChart('cal-chart', [
+    { data: cal,    color: '#3b82f6', dashed: false },
+    { data: target, color: '#f59e0b', dashed: true  },
+  ]);
+  drawLineChart('weight-chart', [
+    { data: weight, color: '#10b981', dashed: false },
+  ]);
+  drawBarChart('steps-chart', steps, '#8b5cf6');
+}
+
+// Initial render
+drawCharts('w');
+</script>
+</body>
+</html>
