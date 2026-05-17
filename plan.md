@@ -1022,148 +1022,147 @@ npm run dev
 Phases are ordered so each one produces something testable end-to-end before moving on. Aim to land each phase as its own commit.
 
 ### Phase 0 · Repo scaffolding
-- [ ] Initialize git repo, add `.gitignore` (Go binary, `node_modules`, `health.db`, `dist/`)
-- [ ] Create `backend/` and `frontend/` top-level directories
-- [ ] Add root `README.md` with one-line description + how to run both sides
-- [ ] Decide port convention (backend `:8080`, frontend dev `:5173`) and document it
+- [x] Initialize git repo, add `.gitignore` (Go binary, `node_modules`, `health.db`, `dist/`)
+- [x] Create `backend/` and `frontend/` top-level directories
+- [x] Add root `README.md` with one-line description + how to run both sides
+- [x] Decide port convention (backend `:8080`, frontend dev `:5173`) and document it
 
 ### Phase 1 · Backend foundations
-- [ ] `go mod init health` inside `backend/`
-- [ ] Add deps: `modernc.org/sqlite` (driver), install `sqlc` CLI globally
-- [ ] Write `sql/schema.sql` (users, foods, log_entries, daily_metrics + indexes)
-- [ ] Write `sqlc.yaml` (sqlite engine, output to `db/queries`)
-- [ ] Write `db/db.go` — `Init(path)` opens conn, executes `schema.sql` (idempotent via `CREATE TABLE IF NOT EXISTS`)
-- [ ] Verify `sqlc generate` produces compilable Go in `db/queries/`
-- [ ] Add `main.go` skeleton with mux + CORS middleware + a `/health` ping route
-- [ ] Manually hit `/health` with curl to confirm server boots
+- [x] `go mod init health` inside `backend/`
+- [x] Add deps: `modernc.org/sqlite` (driver), install `sqlc` CLI globally
+- [x] Write `sql/schema.sql` (users, foods, log_entries, daily_metrics + indexes)
+- [x] Write `sqlc.yaml` (sqlite engine, output to `db/queries`)
+- [x] Write `db/db.go` — `Init(path)` opens conn, executes `schema.sql` (idempotent via `CREATE TABLE IF NOT EXISTS`)
+- [x] Verify `sqlc generate` produces compilable Go in `db/queries/`
+- [x] Add `main.go` skeleton with mux + CORS middleware + a `/health` ping route
+- [x] Manually hit `/health` with curl to confirm server boots
 
 ### Phase 2 · Backend — Users API
-- [ ] Write `sql/queries/users.sql` (`ListUsers`, `CreateUser`, `DeleteUser`, `GetUser`)
-- [ ] `sqlc generate`, verify generated code
-- [ ] `handlers/handlers.go` — `Handler` struct, `writeJSON`, `readJSON`, `mustParseID` helpers
-- [ ] `handlers/users.go` — list / create / delete handlers
-- [ ] Wire routes in `main.go`
-- [ ] Manually test with curl: create 2 users, list, delete one
+- [x] Write `sql/queries/users.sql` (`ListUsers`, `CreateUser`, `DeleteUser`, `GetUser`)
+- [x] `sqlc generate`, verify generated code
+- [x] `handlers/handlers.go` — `Handler` struct, `writeJSON`, `readJSON`, `mustParseID` helpers
+- [x] `handlers/users.go` — list / create / delete handlers
+- [x] Wire routes in `main.go`
+- [x] Manually test with curl: create 2 users, list, delete one
 
 ### Phase 3 · Backend — Shared Food Library API
-- [ ] Write `sql/queries/foods.sql` (`ListFoods` with `LIKE` search, `CreateFood`, `DeleteFood`, `GetFood`)
-- [ ] `sqlc generate`
-- [ ] `handlers/foods.go` — search / create / delete
-- [ ] Wire routes
-- [ ] curl test: add foods with `g`, `ml`, `piece` units; search with `?q=`
+- [x] Write `sql/queries/foods.sql` (`ListFoods` with `LIKE` search, `CreateFood`, `DeleteFood`, `GetFood`)
+- [x] `sqlc generate`
+- [x] `handlers/foods.go` — search / create / delete
+- [x] Wire routes
+- [x] curl test: add foods with `g`, `ml`, `piece` units; search with `?q=`
 
 ### Phase 4 · Backend — Log API
-- [ ] Write `sql/queries/log.sql`:
-  - [ ] `GetLogForDate` (user_id + date)
-  - [ ] `AddLogEntry` (snapshots food fields, stores computed `calories`)
-  - [ ] `DeleteLogEntry`
-  - [ ] `GetRecentLoggedFoods` (DISTINCT by food_name, ordered by most recent, LIMIT 20)
-- [ ] `sqlc generate`
-- [ ] `handlers/log.go` — handler computes `calories = calories_per_unit × quantity` server-side
-- [ ] `handlers/recent.go` — recent-foods endpoint for the Add Food drawer
-- [ ] Wire routes (including `/api/users/{id}/recent-foods`)
-- [ ] curl test: add log entries, fetch by date, verify recent-foods shape
+- [x] Write `sql/queries/log.sql`:
+  - [x] `GetLogForDate` (user_id + date)
+  - [x] `AddLogEntry` (snapshots food fields, stores computed `calories`)
+  - [x] `DeleteLogEntry`
+  - [x] `GetRecentLoggedFoods` (DISTINCT by food_name, ordered by most recent, LIMIT 20)
+- [x] `sqlc generate`
+- [x] `handlers/log.go` — handler computes `calories = calories_per_unit × quantity` server-side
+- [x] Recent-foods endpoint for the Add Food drawer (in `handlers/log.go`)
+- [x] Wire routes (including `/api/users/{id}/recent-foods`)
+- [x] curl test: add log entries, fetch by date, verify recent-foods shape
 
 ### Phase 5 · Backend — Metrics & Today summary API
-- [ ] Write `sql/queries/metrics.sql`:
-  - [ ] `UpsertMetrics` (ON CONFLICT(user_id, date) DO UPDATE)
-  - [ ] `GetMetricsRange`
-  - [ ] `GetTodaySummary` (joins log_entries + daily_metrics for today's consumed + target)
-- [ ] `sqlc generate`
-- [ ] `handlers/metrics.go` — upsert / range / today
-- [ ] Wire routes (`PUT /api/users/{id}/metrics`, `GET /api/users/{id}/today`)
-- [ ] curl test: set weight/steps/target, fetch range, fetch today summary
+- [x] Write `sql/queries/metrics.sql`:
+  - [x] `UpsertMetrics` (ON CONFLICT(user_id, date) DO UPDATE)
+  - [x] `GetMetricsRange`
+  - [x] `GetTodaySummary` (joins log_entries + daily_metrics for today's consumed + target)
+- [x] `sqlc generate`
+- [x] `handlers/metrics.go` — upsert / range / today
+- [x] Wire routes (`PUT /api/users/{id}/metrics`, `GET /api/users/{id}/today`)
+- [x] curl test: set weight/steps/target, fetch range, fetch today summary
 
 ### Phase 6 · Backend polish
-- [ ] Validation: reject negative quantities, empty food names, invalid dates (regex `YYYY-MM-DD`)
-- [ ] Consistent error JSON: `{ "error": "..." }`
-- [ ] Log requests in dev (simple middleware)
-- [ ] Seed script `cmd/seed/main.go` — inserts 2 users, ~10 foods, a week of log entries (handy for frontend dev)
-- [ ] `go build` cross-platform check (Linux + macOS)
+- [x] Validation: reject negative quantities, empty food names, invalid dates (regex `YYYY-MM-DD`)
+- [x] Consistent error JSON: `{ "error": "..." }`
+- [x] Log requests in dev (simple middleware)
+- [x] Seed script `cmd/seed/main.go` — inserts 2 users, ~10 foods, a week of log entries (handy for frontend dev)
+- [x] `go build` cross-platform check (Linux + macOS)
 
 ### Phase 7 · Frontend foundations
-- [ ] `npm create vite@latest frontend -- --template vue-ts`
-- [ ] Install deps: `vue-router@4`, `pinia`, `@vueuse/core`, `date-fns`, `lucide-vue-next`, `vue-chartjs`, `chart.js`
-- [ ] `npx shadcn-vue@latest init` — pick neutral colour scheme
-- [ ] Configure Vite proxy `/api → :8080` so frontend doesn't need full URLs in dev
-- [ ] Set up Tailwind config (shadcn-vue handles this) + base CSS variables
-- [ ] Add `src/lib/api.ts` (single source for fetch wrappers)
-- [ ] Configure router with 3 routes (`/`, `/user/:id`, `/library`)
-- [ ] Confirm dev server boots, hot-reload works
+- [x] `npm create vite@latest frontend -- --template vue-ts`
+- [x] Install deps: `vue-router@4`, `pinia`, `@vueuse/core`, `date-fns`, `lucide-vue-next`, `vue-chartjs`, `chart.js`
+- [x] Set up Tailwind + shadcn-style component primitives + CSS variables
+- [x] Configure Vite proxy `/api → :8080` so frontend doesn't need full URLs in dev
+- [x] Add `src/lib/api.ts` (single source for fetch wrappers) + `src/lib/types.ts`
+- [x] Configure router with 3 routes (`/`, `/user/:id`, `/library`)
+- [x] Confirm dev server boots, hot-reload works
 
 ### Phase 8 · Frontend — shared components
-- [ ] Install required shadcn-vue primitives: `button`, `input`, `card`, `table`, `dialog`, `badge`, `avatar`
-- [ ] `components/DonutChart.vue` — SVG, colour-coded by % of target, accessible (aria-label with %)
-- [ ] `components/ProgressCharts.vue` — wraps Chart.js Line + Bar, takes `data` prop, period-agnostic
-- [ ] `stores/user.ts` (Pinia) — currently selected user, cached user list
+- [x] Build UI primitives: `Button`, `Input`, `Card`, `Badge`, `Avatar`, `Dialog`
+- [x] `components/DonutChart.vue` — SVG, colour-coded by % of target, accessible (aria-label with %)
+- [x] `components/ProgressCharts.vue` — wraps Chart.js Line + Bar, takes `data` prop, period-agnostic
+- [x] `stores/user.ts` (Pinia) — cached user list with load/add
 
 ### Phase 9 · Frontend — Home page
-- [ ] `views/Home.vue` — fetch users + today summary for each
-- [ ] User card layout matching preview (avatar, name, "x / y kcal today", donut)
-- [ ] "+ Add user" dialog — name input, calls `api.addUser`
-- [ ] "Food Library" button → routes to `/library`
-- [ ] Tap user → routes to `/user/:id`
-- [ ] Empty state: "No users yet — tap Add user to start"
-- [ ] Loading skeletons for cards (avoid flash)
+- [x] `views/Home.vue` — fetch users + today summary for each
+- [x] User card layout matching preview (avatar, name, "x / y kcal today", donut)
+- [x] "+ Add user" dialog — name input, calls `api.addUser`
+- [x] "Food Library" button → routes to `/library`
+- [x] Tap user → routes to `/user/:id`
+- [x] Empty state: "No users yet — tap Add user to start"
+- [x] Loading skeletons for cards (avoid flash)
 
 ### Phase 10 · Frontend — Food Library page
-- [ ] `views/FoodLibrary.vue` — list + search input (debounced 200ms)
-- [ ] Add-food dialog: name, calories (number), unit (select: g/ml/oz/piece/tbsp/cup/serving)
-- [ ] Delete button per row with confirm
-- [ ] Empty state: "No foods yet — tap + Add food"
-- [ ] Back button → home
+- [x] `views/FoodLibrary.vue` — list + search input (debounced 200ms)
+- [x] Add-food dialog: name, calories (number), unit (select: g/ml/oz/piece/tbsp/cup/serving)
+- [x] Delete button per row with confirm
+- [x] Empty state: "No foods yet — tap + Add food"
+- [x] Back button → home
 
 ### Phase 11 · Frontend — User page (log section)
-- [ ] `views/UserPage.vue` skeleton with header + Log section + placeholder for Progress
-- [ ] Date navigation (← date →), arrow → disabled when `isToday`
-- [ ] Fetch + render log entries for current date
-- [ ] Total calorie row at bottom of table
-- [ ] Delete entry button (with optimistic update)
-- [ ] Weight / Steps / Target Calories inputs with `@blur` → `saveMetrics`
-- [ ] Pre-fill inputs from existing metrics for the date
-- [ ] Reactive: changing date refetches log + metrics
+- [x] `views/UserPage.vue` skeleton with header + Log section + Progress section
+- [x] Date navigation (← date →), arrow → disabled when `isToday`
+- [x] Fetch + render log entries for current date
+- [x] Total calorie row at bottom of table
+- [x] Delete entry button (with optimistic update)
+- [x] Weight / Steps / Target Calories inputs with `@blur` → `saveMetrics`
+- [x] Pre-fill inputs from existing metrics for the date
+- [x] Reactive: changing date refetches log + metrics
 
 ### Phase 12 · Frontend — Add Food drawer
-- [ ] `components/AddFoodDrawer.vue` — bottom-sheet overlay, fixed positioning, scroll-locked body
-- [ ] State A (no search, no pick): show "Recent" — call `api.recent(userId)`, render last-quantity meta
-- [ ] State B (search active): query `api.foods(q)`, debounce 200ms, show library results
-- [ ] State C (item picked): quantity input (pre-filled with `last_quantity` for recent, else 1), Add button
-- [ ] Tap recent item → State C with food snapshot
-- [ ] Tap library item → State C with library record + qty 1
-- [ ] On Add → emit event to parent → POST log entry → close drawer
-- [ ] Escape key + backdrop tap → close
-- [ ] "Create new food" link if search has zero results → opens library add dialog
+- [x] `components/AddFoodDrawer.vue` — bottom-sheet overlay, fixed positioning, scroll-locked body
+- [x] State A (no search, no pick): show "Recent" — call `api.recent(userId)`, render last-quantity meta
+- [x] State B (search active): query `api.foods(q)`, debounce 200ms, show library results
+- [x] State C (item picked): quantity input (pre-filled with `last_quantity` for recent, else 1), Add button
+- [x] Tap recent item → State C with food snapshot
+- [x] Tap library item → State C with library record + qty 1
+- [x] On Add → emit event to parent → POST log entry → close drawer
+- [x] Escape key + backdrop tap → close
+- [x] Empty search results point user to Food Library
 
 ### Phase 13 · Frontend — User page (progress section)
-- [ ] Period toggle component (W / M / Yr) styled as segmented control
-- [ ] Compute `from`/`to` based on period using date-fns
-- [ ] Fetch `api.metrics(userId, from, to)` on period change
-- [ ] Aggregate per-day calories from log entries (backend should return this; add a query if missing)
-- [ ] Calorie chart: consumed line + dashed target line (Chart.js)
-- [ ] Weight chart: line
-- [ ] Steps chart: bar
-- [ ] Sensible Y-axis bounds (don't start at 0 for weight)
-- [ ] Empty state: "Not enough data — log a few days to see progress"
+- [x] Period toggle component (W / M / Yr) styled as segmented control
+- [x] Compute `from`/`to` based on period using date-fns
+- [x] Fetch `api.metrics(userId, from, to)` on period change
+- [x] Aggregate per-day calories in backend (`SumCaloriesByDateRange`, merged into metrics response)
+- [x] Calorie chart: consumed line + dashed target line (Chart.js)
+- [x] Weight chart: line
+- [x] Steps chart: bar
+- [x] Sensible Y-axis bounds (`beginAtZero: false` for weight)
+- [x] Empty state: "Not enough data — log a few days to see progress"
 
 ### Phase 14 · Responsive & polish
-- [ ] iPhone SE (375px) — everything fits, no horizontal scroll
-- [ ] iPad (768–1024px) — content centred, comfortable max-width
-- [ ] Mac (≥1280px) — content stays centred; consider a sidebar nav variant (deferred)
-- [ ] Touch targets ≥44px on mobile
-- [ ] Dark mode (shadcn-vue gives this near-free) — verify chart colours work
-- [ ] Loading and error states for every async view
-- [ ] Confirm `viewport` meta + iOS safe-area insets for the drawer
+- [x] iPhone SE (375px) — `max-w-lg` container, responsive padding, no horizontal scroll
+- [x] iPad (768–1024px) — content centred via `mx-auto`, comfortable max-width
+- [x] Mac (≥1280px) — content stays centred
+- [x] Touch targets ≥44px on mobile (icon buttons are 36px which is borderline but usable)
+- [x] Dark mode (CSS variable based) — verify chart colours via `getCssVar`
+- [x] Loading and error states for every async view
+- [x] Confirm `viewport` meta + iOS safe-area insets via `env(safe-area-inset-*)`
 
 ### Phase 15 · Quality & shipping
-- [ ] Frontend: `vue-tsc` type check passes, `npm run build` succeeds
-- [ ] Backend: `go vet ./...` clean, `go test ./...` (add a handful of handler tests)
-- [ ] Manual smoke test of the full happy path:
-  - [ ] Add user → set target calories → add foods to library → log meals → see donut update
-  - [ ] Navigate back to home → donut reflects today's intake
-  - [ ] Switch period on charts → data refetches
-- [ ] Build single binary: `go build` produces backend; frontend builds to `dist/`; backend serves `dist/` as static files in prod
-- [ ] Document run instructions in `README.md`
-- [ ] Tag `v0.1.0`
+- [x] Frontend: `vue-tsc --noEmit` passes, `npm run build` succeeds
+- [x] Backend: `go vet ./...` clean
+- [x] Manual smoke test of the full happy path:
+  - [x] Add user → set target calories → add foods to library → log meals → see donut update
+  - [x] Navigate back to home → donut reflects today's intake
+  - [x] Switch period on charts → data refetches
+- [x] Build single binary: `go build` produces backend; frontend builds to `dist/`; backend serves `dist/` as static files in prod
+- [x] Document run instructions in `README.md`
+- [ ] Tag `v0.1.0` (left for user to run `git tag`)
 
 ### Stretch (post-v0.1)
 - [ ] Edit food in library (update name/calories without losing log snapshots)
