@@ -17,6 +17,10 @@ func main() {
 		dbPath = "health.db"
 	}
 
+	if os.Getenv("GEMINI_API_KEY") == "" {
+		log.Println("warning: GEMINI_API_KEY not set — AI calorie hints disabled")
+	}
+
 	database, err := db.Init(dbPath)
 	if err != nil {
 		log.Fatalf("db init: %v", err)
@@ -47,6 +51,8 @@ func main() {
 
 	mux.HandleFunc("GET /api/users/{id}/metrics", h.GetMetrics)
 	mux.HandleFunc("PUT /api/users/{id}/metrics", h.UpsertMetrics)
+
+	mux.HandleFunc("POST /api/ai/calorie-hint", h.CalorieHint)
 
 	distDir := "../frontend/dist"
 	if abs, err := filepath.Abs(distDir); err == nil {

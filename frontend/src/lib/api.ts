@@ -70,4 +70,10 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(payload),
     }),
+
+  calorieHint: (name: string) =>
+    request<{ hint: string }>(`${BASE}/ai/calorie-hint`, {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
 }

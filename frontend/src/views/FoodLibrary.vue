@@ -24,6 +24,9 @@ const newFood = ref<{ name: string; unit: string; calories: string }>({
 })
 const saving = ref(false)
 const errMsg = ref('')
+const aiHint = ref('')
+const aiLoading = ref(false)
+const aiError = ref('')
 
 let searchTimer: number | undefined
 
@@ -39,6 +42,30 @@ async function load() {
 watch(query, () => {
   window.clearTimeout(searchTimer)
   searchTimer = window.setTimeout(load, 200)
+})
+
+async function fetchCalorieHint() {
+  const name = newFood.value.name.trim()
+  if (!name) return
+  aiHint.value = ''
+  aiError.value = ''
+  aiLoading.value = true
+  try {
+    const res = await api.calorieHint(name)
+    aiHint.value = res.hint
+  } catch {
+    aiError.value = 'Could not fetch AI hint.'
+  } finally {
+    aiLoading.value = false
+  }
+}
+
+watch(showAdd, (open) => {
+  if (!open) {
+    aiHint.value = ''
+    aiError.value = ''
+    aiLoading.value = false
+  }
 })
 
 async function addFood() {
@@ -119,7 +146,24 @@ onMounted(load)
 
   <Dialog v-model:open="showAdd" title="New food">
     <div class="flex flex-col gap-3">
-      <Input v-model="newFood.name" placeholder="Food name" />
+      <div class="flex gap-2">
+        <Input v-model="newFood.name" placeholder="Food name" class="flex-1" />
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          :disabled="aiLoading || !newFood.name.trim()"
+          @click="fetchCalorieHint"
+          title="Ask AI for calorie info"
+        >
+          <span v-if="aiLoading" class="animate-pulse">…</span>
+          <span v-else>✨ AI</span>
+        </Button>
+      </div>
+      <p v-if="aiHint" class="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground leading-snug">
+        {{ aiHint }}
+      </p>
+      <p v-if="aiError" class="text-xs text-destructive">{{ aiError }}</p>
       <div class="flex gap-2">
         <Input
           v-model="newFood.calories"
