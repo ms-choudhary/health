@@ -13,3 +13,15 @@ RETURNING *;
 
 -- name: DeleteFood :exec
 DELETE FROM foods WHERE id = ?;
+
+-- name: UpdateFoodCalories :one
+UPDATE foods
+SET calories_per_unit = ?
+WHERE id = ?
+RETURNING *;
+
+-- name: RestampLogEntriesForFood :exec
+UPDATE log_entries
+SET calories_per_unit = ?1,
+    calories          = ?1 * quantity
+WHERE food_id = ?2;

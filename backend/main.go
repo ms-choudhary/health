@@ -44,6 +44,7 @@ func main() {
 
 	mux.HandleFunc("GET /api/foods", h.ListFoods)
 	mux.HandleFunc("POST /api/foods", h.CreateFood)
+	mux.HandleFunc("PUT /api/foods/{id}", h.UpdateFood)
 	mux.HandleFunc("DELETE /api/foods/{id}", h.DeleteFood)
 
 	mux.HandleFunc("GET /api/users/{id}/log", h.GetLog)

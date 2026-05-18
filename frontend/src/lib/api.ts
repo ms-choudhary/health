@@ -8,6 +8,7 @@ import type {
   TodaySummary,
   AddLogPayload,
   CreateFoodPayload,
+  UpdateFoodPayload,
   CreateUserPayload,
   UpdateUserPayload,
   Recipe,
@@ -60,6 +61,11 @@ export const api = {
     request<Food[]>(`${BASE}/foods?q=${encodeURIComponent(search)}`),
   createFood: (payload: CreateFoodPayload) =>
     request<Food>(`${BASE}/foods`, { method: 'POST', body: JSON.stringify(payload) }),
+  updateFood: (id: number, payload: UpdateFoodPayload) =>
+    request<Food>(`${BASE}/foods/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
   deleteFood: (id: number) =>
     request<void>(`${BASE}/foods/${id}`, { method: 'DELETE' }),
 

@@ -81,6 +81,10 @@ export interface CreateFoodPayload {
   calories_per_unit: number
 }
 
+export interface UpdateFoodPayload {
+  calories_per_unit: number
+}
+
 export interface Recipe {
   id: number
   name: string

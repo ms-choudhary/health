@@ -94,3 +94,45 @@ func (q *Queries) ListFoods(ctx context.Context, search *string) ([]Food, error)
 	}
 	return items, nil
 }
+
+const restampLogEntriesForFood = `-- name: RestampLogEntriesForFood :exec
+UPDATE log_entries
+SET calories_per_unit = ?1,
+    calories          = ?1 * quantity
+WHERE food_id = ?2
+`
+
+type RestampLogEntriesForFoodParams struct {
+	CaloriesPerUnit float64 `json:"calories_per_unit"`
+	FoodID          *int64  `json:"food_id"`
+}
+
+func (q *Queries) RestampLogEntriesForFood(ctx context.Context, arg RestampLogEntriesForFoodParams) error {
+	_, err := q.db.ExecContext(ctx, restampLogEntriesForFood, arg.CaloriesPerUnit, arg.FoodID)
+	return err
+}
+
+const updateFoodCalories = `-- name: UpdateFoodCalories :one
+UPDATE foods
+SET calories_per_unit = ?
+WHERE id = ?
+RETURNING id, name, unit, calories_per_unit, created_at
+`
+
+type UpdateFoodCaloriesParams struct {
+	CaloriesPerUnit float64 `json:"calories_per_unit"`
+	ID              int64   `json:"id"`
+}
+
+func (q *Queries) UpdateFoodCalories(ctx context.Context, arg UpdateFoodCaloriesParams) (Food, error) {
+	row := q.db.QueryRowContext(ctx, updateFoodCalories, arg.CaloriesPerUnit, arg.ID)
+	var i Food
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Unit,
+		&i.CaloriesPerUnit,
+		&i.CreatedAt,
+	)
+	return i, err
+}
