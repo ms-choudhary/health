@@ -1,8 +1,9 @@
 CREATE TABLE IF NOT EXISTS users (
-  id         INTEGER PRIMARY KEY AUTOINCREMENT,
-  name       TEXT NOT NULL,
-  avatar     TEXT NOT NULL,
-  created_at TEXT NOT NULL DEFAULT (date('now'))
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  name            TEXT    NOT NULL,
+  avatar          TEXT    NOT NULL,
+  target_calories INTEGER NOT NULL DEFAULT 2000,
+  created_at      TEXT    NOT NULL DEFAULT (date('now'))
 );
 
 CREATE TABLE IF NOT EXISTS foods (
@@ -41,12 +42,11 @@ CREATE TABLE IF NOT EXISTS recipe_ingredients (
 );
 
 CREATE TABLE IF NOT EXISTS daily_metrics (
-  id              INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  date            TEXT NOT NULL,
-  weight          REAL,
-  steps           INTEGER,
-  target_calories INTEGER,
+  id      INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  date    TEXT    NOT NULL,
+  weight  REAL,
+  steps   INTEGER,
   UNIQUE(user_id, date)
 );
 

@@ -2,6 +2,7 @@ export interface User {
   id: number
   name: string
   avatar: string
+  target_calories: number
   created_at: string
 }
 
@@ -41,7 +42,6 @@ export interface DailyMetric {
   date: string
   weight: number | null
   steps: number | null
-  target_calories: number | null
   calories_consumed: number
 }
 
@@ -49,7 +49,16 @@ export interface MetricsUpdate {
   date: string
   weight: number | null
   steps: number | null
-  target_calories: number | null
+}
+
+export interface CreateUserPayload {
+  name: string
+  target_calories: number
+}
+
+export interface UpdateUserPayload {
+  name?: string
+  target_calories?: number
 }
 
 export interface TodaySummary {

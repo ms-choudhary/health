@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { User } from '@/lib/types'
+import type { User, CreateUserPayload } from '@/lib/types'
 import { api } from '@/lib/api'
 
 export const useUserStore = defineStore('users', () => {
@@ -16,15 +16,28 @@ export const useUserStore = defineStore('users', () => {
     }
   }
 
-  async function add(name: string): Promise<User> {
-    const u = await api.createUser(name)
+  async function add(payload: CreateUserPayload): Promise<User> {
+    const u = await api.createUser(payload)
     users.value = [...users.value, u]
     return u
+  }
+
+  function upsert(user: User): void {
+    const idx = users.value.findIndex((u) => u.id === user.id)
+    if (idx >= 0) {
+      users.value = [
+        ...users.value.slice(0, idx),
+        user,
+        ...users.value.slice(idx + 1),
+      ]
+    } else {
+      users.value = [...users.value, user]
+    }
   }
 
   function findById(id: number): User | undefined {
     return users.value.find((u) => u.id === id)
   }
 
-  return { users, loading, load, add, findById }
+  return { users, loading, load, add, upsert, findById }
 })

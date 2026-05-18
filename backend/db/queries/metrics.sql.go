@@ -10,7 +10,7 @@ import (
 )
 
 const getMetricsForDate = `-- name: GetMetricsForDate :one
-SELECT id, user_id, date, weight, steps, target_calories FROM daily_metrics
+SELECT id, user_id, date, weight, steps FROM daily_metrics
 WHERE user_id = ? AND date = ?
 `
 
@@ -28,13 +28,12 @@ func (q *Queries) GetMetricsForDate(ctx context.Context, arg GetMetricsForDatePa
 		&i.Date,
 		&i.Weight,
 		&i.Steps,
-		&i.TargetCalories,
 	)
 	return i, err
 }
 
 const getMetricsRange = `-- name: GetMetricsRange :many
-SELECT id, user_id, date, weight, steps, target_calories FROM daily_metrics
+SELECT id, user_id, date, weight, steps FROM daily_metrics
 WHERE user_id = ?1
   AND date >= ?2
   AND date <= ?3
@@ -62,7 +61,6 @@ func (q *Queries) GetMetricsRange(ctx context.Context, arg GetMetricsRangeParams
 			&i.Date,
 			&i.Weight,
 			&i.Steps,
-			&i.TargetCalories,
 		); err != nil {
 			return nil, err
 		}
@@ -80,9 +78,10 @@ func (q *Queries) GetMetricsRange(ctx context.Context, arg GetMetricsRangeParams
 const getTodaySummary = `-- name: GetTodaySummary :one
 SELECT
   CAST(COALESCE((SELECT SUM(le.calories) FROM log_entries le
-            WHERE le.user_id = ?1 AND le.date = date('now')), 0) AS REAL) AS consumed,
-  CAST(COALESCE((SELECT dm.target_calories FROM daily_metrics dm
-            WHERE dm.user_id = ?1 AND dm.date = date('now')), 0) AS INTEGER) AS target
+            WHERE le.user_id = u.id AND le.date = date('now')), 0) AS REAL) AS consumed,
+  u.target_calories AS target
+FROM users u
+WHERE u.id = ?
 `
 
 type GetTodaySummaryRow struct {
@@ -90,29 +89,27 @@ type GetTodaySummaryRow struct {
 	Target   int64   `json:"target"`
 }
 
-func (q *Queries) GetTodaySummary(ctx context.Context, userID int64) (GetTodaySummaryRow, error) {
-	row := q.db.QueryRowContext(ctx, getTodaySummary, userID)
+func (q *Queries) GetTodaySummary(ctx context.Context, id int64) (GetTodaySummaryRow, error) {
+	row := q.db.QueryRowContext(ctx, getTodaySummary, id)
 	var i GetTodaySummaryRow
 	err := row.Scan(&i.Consumed, &i.Target)
 	return i, err
 }
 
 const upsertMetrics = `-- name: UpsertMetrics :one
-INSERT INTO daily_metrics (user_id, date, weight, steps, target_calories)
-VALUES (?, ?, ?, ?, ?)
+INSERT INTO daily_metrics (user_id, date, weight, steps)
+VALUES (?, ?, ?, ?)
 ON CONFLICT(user_id, date) DO UPDATE SET
-  weight          = excluded.weight,
-  steps           = excluded.steps,
-  target_calories = excluded.target_calories
-RETURNING id, user_id, date, weight, steps, target_calories
+  weight = excluded.weight,
+  steps  = excluded.steps
+RETURNING id, user_id, date, weight, steps
 `
 
 type UpsertMetricsParams struct {
-	UserID         int64    `json:"user_id"`
-	Date           string   `json:"date"`
-	Weight         *float64 `json:"weight"`
-	Steps          *int64   `json:"steps"`
-	TargetCalories *int64   `json:"target_calories"`
+	UserID int64    `json:"user_id"`
+	Date   string   `json:"date"`
+	Weight *float64 `json:"weight"`
+	Steps  *int64   `json:"steps"`
 }
 
 func (q *Queries) UpsertMetrics(ctx context.Context, arg UpsertMetricsParams) (DailyMetric, error) {
@@ -121,7 +118,6 @@ func (q *Queries) UpsertMetrics(ctx context.Context, arg UpsertMetricsParams) (D
 		arg.Date,
 		arg.Weight,
 		arg.Steps,
-		arg.TargetCalories,
 	)
 	var i DailyMetric
 	err := row.Scan(
@@ -130,7 +126,6 @@ func (q *Queries) UpsertMetrics(ctx context.Context, arg UpsertMetricsParams) (D
 		&i.Date,
 		&i.Weight,
 		&i.Steps,
-		&i.TargetCalories,
 	)
 	return i, err
 }

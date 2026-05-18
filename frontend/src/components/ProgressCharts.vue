@@ -28,7 +28,7 @@ ChartJS.register(
   Filler,
 )
 
-const props = defineProps<{ data: DailyMetric[] }>()
+const props = defineProps<{ data: DailyMetric[]; target: number }>()
 
 const labels = computed(() => props.data.map((d) => d.date.slice(5)))
 
@@ -57,7 +57,7 @@ const caloriesData = computed<ChartData<'line'>>(() => ({
     },
     {
       label: 'Target',
-      data: props.data.map((d) => d.target_calories ?? null),
+      data: props.data.map(() => (props.target > 0 ? props.target : null)),
       borderColor: amber.value,
       backgroundColor: amber.value,
       borderDash: [6, 4],

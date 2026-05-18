@@ -47,6 +47,7 @@ const weight = ref<string>('')
 const steps = ref<string>('')
 const targetCalories = ref<string>('')
 let savingMetrics = false
+let savingTarget = false
 
 const period = ref<Period>('w')
 const metricsRange = ref<DailyMetric[]>([])
@@ -112,10 +113,14 @@ async function loadLog() {
     const m = range[0]
     weight.value = m?.weight != null ? String(m.weight) : ''
     steps.value = m?.steps != null ? String(m.steps) : ''
-    targetCalories.value = m?.target_calories != null ? String(m.target_calories) : ''
   } finally {
     loadingLog.value = false
   }
+}
+
+function syncTargetFromUser(): void {
+  const u = user.value
+  targetCalories.value = u ? String(u.target_calories) : ''
 }
 
 function dateRangeForPeriod(): { from: string; to: string } {
@@ -152,16 +157,33 @@ async function saveMetrics() {
   try {
     const w = parseOptionalNumber(weight.value)
     const s = parseOptionalNumber(steps.value)
-    const t = parseOptionalNumber(targetCalories.value)
     await api.saveMetrics(props.userId, {
       date: date.value,
       weight: w,
       steps: s != null ? Math.round(s) : null,
-      target_calories: t != null ? Math.round(t) : null,
     })
     await loadCharts()
   } finally {
     savingMetrics = false
+  }
+}
+
+async function saveTargetCalories() {
+  if (savingTarget) return
+  const t = parseOptionalNumber(targetCalories.value)
+  if (t == null || t <= 0) {
+    syncTargetFromUser()
+    return
+  }
+  const rounded = Math.round(t)
+  if (user.value && user.value.target_calories === rounded) return
+  savingTarget = true
+  try {
+    const updated = await api.updateUser(props.userId, { target_calories: rounded })
+    userStore.upsert(updated)
+    targetCalories.value = String(updated.target_calories)
+  } finally {
+    savingTarget = false
   }
 }
 
@@ -182,9 +204,11 @@ async function onFoodAdded() {
 
 watch(date, loadLog)
 watch(period, loadCharts)
+watch(user, syncTargetFromUser, { immediate: true })
 
 onMounted(async () => {
   if (userStore.users.length === 0) await userStore.load()
+  syncTargetFromUser()
   await loadLog()
   await loadCharts()
 })
@@ -340,10 +364,10 @@ onMounted(async () => {
               v-model="targetCalories"
               type="number"
               inputmode="numeric"
-              min="0"
+              min="1"
               step="50"
               placeholder="2000"
-              @blur="saveMetrics"
+              @blur="saveTargetCalories"
             />
             <span class="text-xs text-muted-foreground w-10">kcal</span>
           </div>
@@ -371,7 +395,7 @@ onMounted(async () => {
       <div v-if="loadingCharts" class="space-y-3">
         <div v-for="i in 3" :key="i" class="h-48 rounded-lg bg-muted animate-pulse" />
       </div>
-      <ProgressCharts v-else :data="metricsRange" />
+      <ProgressCharts v-else :data="metricsRange" :target="user?.target_calories ?? 0" />
     </section>
   </div>
 

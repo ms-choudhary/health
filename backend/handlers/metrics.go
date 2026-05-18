@@ -7,13 +7,12 @@ import (
 )
 
 type metricsResponse struct {
-	ID              int64    `json:"id"`
-	UserID          int64    `json:"user_id"`
-	Date            string   `json:"date"`
-	Weight          *float64 `json:"weight"`
-	Steps           *int64   `json:"steps"`
-	TargetCalories  *int64   `json:"target_calories"`
-	CaloriesConsumed float64 `json:"calories_consumed"`
+	ID               int64    `json:"id"`
+	UserID           int64    `json:"user_id"`
+	Date             string   `json:"date"`
+	Weight           *float64 `json:"weight"`
+	Steps            *int64   `json:"steps"`
+	CaloriesConsumed float64  `json:"calories_consumed"`
 }
 
 func (h *Handler) GetMetrics(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +57,6 @@ func (h *Handler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 			Date:             m.Date,
 			Weight:           m.Weight,
 			Steps:            m.Steps,
-			TargetCalories:   m.TargetCalories,
 			CaloriesConsumed: calByDate[m.Date],
 		})
 	}
@@ -66,10 +64,9 @@ func (h *Handler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 }
 
 type upsertMetricsBody struct {
-	Date           string   `json:"date"`
-	Weight         *float64 `json:"weight"`
-	Steps          *int64   `json:"steps"`
-	TargetCalories *int64   `json:"target_calories"`
+	Date   string   `json:"date"`
+	Weight *float64 `json:"weight"`
+	Steps  *int64   `json:"steps"`
 }
 
 func (h *Handler) UpsertMetrics(w http.ResponseWriter, r *http.Request) {
@@ -95,16 +92,11 @@ func (h *Handler) UpsertMetrics(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "steps must be >= 0")
 		return
 	}
-	if body.TargetCalories != nil && *body.TargetCalories < 0 {
-		writeError(w, http.StatusBadRequest, "target_calories must be >= 0")
-		return
-	}
 	m, err := h.Q.UpsertMetrics(r.Context(), queries.UpsertMetricsParams{
-		UserID:         userID,
-		Date:           body.Date,
-		Weight:         body.Weight,
-		Steps:          body.Steps,
-		TargetCalories: body.TargetCalories,
+		UserID: userID,
+		Date:   body.Date,
+		Weight: body.Weight,
+		Steps:  body.Steps,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())

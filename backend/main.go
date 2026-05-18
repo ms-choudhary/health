@@ -38,6 +38,7 @@ func main() {
 
 	mux.HandleFunc("GET /api/users", h.ListUsers)
 	mux.HandleFunc("POST /api/users", h.CreateUser)
+	mux.HandleFunc("PUT /api/users/{id}", h.UpdateUser)
 	mux.HandleFunc("DELETE /api/users/{id}", h.DeleteUser)
 	mux.HandleFunc("GET /api/users/{id}/today", h.GetTodaySummary)
 

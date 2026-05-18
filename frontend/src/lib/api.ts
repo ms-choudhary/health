@@ -8,6 +8,8 @@ import type {
   TodaySummary,
   AddLogPayload,
   CreateFoodPayload,
+  CreateUserPayload,
+  UpdateUserPayload,
   Recipe,
   RecipeListItem,
   RecipeWithIngredients,
@@ -38,10 +40,15 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   listUsers: () => request<User[]>(`${BASE}/users`),
-  createUser: (name: string) =>
+  createUser: (payload: CreateUserPayload) =>
     request<User>(`${BASE}/users`, {
       method: 'POST',
-      body: JSON.stringify({ name }),
+      body: JSON.stringify(payload),
+    }),
+  updateUser: (id: number, payload: UpdateUserPayload) =>
+    request<User>(`${BASE}/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
     }),
   deleteUser: (id: number) =>
     request<void>(`${BASE}/users/${id}`, { method: 'DELETE' }),

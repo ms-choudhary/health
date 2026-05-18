@@ -34,8 +34,8 @@ func main() {
 	q := database.Queries
 
 	users := []queries.CreateUserParams{
-		{Name: "Mohit", Avatar: "MO"},
-		{Name: "Sara", Avatar: "SR"},
+		{Name: "Mohit", Avatar: "MO", TargetCalories: 2200},
+		{Name: "Sara", Avatar: "SR", TargetCalories: 1800},
 	}
 	createdUsers := make([]queries.User, 0, len(users))
 	for _, u := range users {
@@ -77,10 +77,9 @@ func main() {
 			date := today.AddDate(0, 0, -d).Format("2006-01-02")
 			weight := baseWeight + rng.Float64()*1.5 - float64(d)*0.05
 			steps := int64(4000 + rng.Intn(8000))
-			target := int64(2000)
 			if _, err := q.UpsertMetrics(ctx, queries.UpsertMetricsParams{
 				UserID: u.ID, Date: date,
-				Weight: &weight, Steps: &steps, TargetCalories: &target,
+				Weight: &weight, Steps: &steps,
 			}); err != nil {
 				log.Fatal(err)
 			}

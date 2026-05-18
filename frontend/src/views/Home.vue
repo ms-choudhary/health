@@ -18,7 +18,8 @@ const userStore = useUserStore()
 const summaries = ref<Record<number, TodaySummary>>({})
 const loading = ref(true)
 const showAdd = ref(false)
-const newName = ref('')
+const newName = ref<string>('')
+const newTarget = ref<string>('2000')
 const adding = ref(false)
 const errMsg = ref('')
 
@@ -44,13 +45,19 @@ async function load() {
 
 async function submitAdd() {
   const name = newName.value.trim()
+  const t = Number(newTarget.value)
   if (!name) return
+  if (!Number.isFinite(t) || t <= 0) {
+    errMsg.value = 'Daily calorie target must be a positive number'
+    return
+  }
   adding.value = true
   errMsg.value = ''
   try {
-    const u = await userStore.add(name)
-    summaries.value = { ...summaries.value, [u.id]: { consumed: 0, target: 0 } }
+    const u = await userStore.add({ name, target_calories: Math.round(t) })
+    summaries.value = { ...summaries.value, [u.id]: { consumed: 0, target: u.target_calories } }
     newName.value = ''
+    newTarget.value = '2000'
     showAdd.value = false
   } catch (e) {
     errMsg.value = e instanceof Error ? e.message : 'Failed to add user'
@@ -123,6 +130,18 @@ onMounted(load)
   <Dialog v-model:open="showAdd" title="New user">
     <div class="flex flex-col gap-3">
       <Input v-model="newName" placeholder="Name" @keyup.enter="submitAdd" />
+      <div class="flex flex-col gap-1">
+        <Input
+          v-model="newTarget"
+          type="number"
+          inputmode="numeric"
+          min="1"
+          step="50"
+          placeholder="Daily calorie target"
+          @keyup.enter="submitAdd"
+        />
+        <p class="text-xs text-muted-foreground">Daily calorie target (kcal)</p>
+      </div>
       <p v-if="errMsg" class="text-sm text-destructive">{{ errMsg }}</p>
       <div class="flex justify-end gap-2">
         <Button variant="ghost" @click="showAdd = false">Cancel</Button>

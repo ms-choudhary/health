@@ -5,12 +5,11 @@
 package queries
 
 type DailyMetric struct {
-	ID             int64    `json:"id"`
-	UserID         int64    `json:"user_id"`
-	Date           string   `json:"date"`
-	Weight         *float64 `json:"weight"`
-	Steps          *int64   `json:"steps"`
-	TargetCalories *int64   `json:"target_calories"`
+	ID     int64    `json:"id"`
+	UserID int64    `json:"user_id"`
+	Date   string   `json:"date"`
+	Weight *float64 `json:"weight"`
+	Steps  *int64   `json:"steps"`
 }
 
 type Food struct {
@@ -49,8 +48,9 @@ type RecipeIngredient struct {
 }
 
 type User struct {
-	ID        int64  `json:"id"`
-	Name      string `json:"name"`
-	Avatar    string `json:"avatar"`
-	CreatedAt string `json:"created_at"`
+	ID             int64  `json:"id"`
+	Name           string `json:"name"`
+	Avatar         string `json:"avatar"`
+	TargetCalories int64  `json:"target_calories"`
+	CreatedAt      string `json:"created_at"`
 }
