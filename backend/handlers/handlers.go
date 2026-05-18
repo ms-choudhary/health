@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -11,11 +12,12 @@ import (
 )
 
 type Handler struct {
-	Q *queries.Queries
+	DB *sql.DB
+	Q  *queries.Queries
 }
 
-func New(q *queries.Queries) *Handler {
-	return &Handler{Q: q}
+func New(db *sql.DB, q *queries.Queries) *Handler {
+	return &Handler{DB: db, Q: q}
 }
 
 type errorBody struct {

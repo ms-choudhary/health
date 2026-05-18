@@ -104,6 +104,58 @@ func main() {
 		}
 	}
 
-	fmt.Printf("Seeded %d users, %d foods, ~14 days of log entries each.\n",
-		len(createdUsers), len(createdFoods))
+	foodByName := make(map[string]queries.Food, len(createdFoods))
+	for _, f := range createdFoods {
+		foodByName[f.Name] = f
+	}
+	type seedRecipeIngredient struct {
+		foodName string
+		quantity float64
+	}
+	type seedRecipe struct {
+		name        string
+		ingredients []seedRecipeIngredient
+	}
+	demoRecipes := []seedRecipe{
+		{
+			name: "Yogurt Parfait",
+			ingredients: []seedRecipeIngredient{
+				{"Greek Yogurt", 200},
+				{"Almonds", 15},
+				{"Banana", 1},
+			},
+		},
+		{
+			name: "Avocado Egg Bowl",
+			ingredients: []seedRecipeIngredient{
+				{"Avocado", 100},
+				{"Egg", 2},
+				{"Olive Oil", 5},
+			},
+		},
+	}
+	createdRecipes := 0
+	for _, dr := range demoRecipes {
+		recipe, err := q.CreateRecipe(ctx, dr.name)
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, ing := range dr.ingredients {
+			food, ok := foodByName[ing.foodName]
+			if !ok {
+				log.Fatalf("seed recipe ingredient %q not found", ing.foodName)
+			}
+			if _, err := q.AddRecipeIngredient(ctx, queries.AddRecipeIngredientParams{
+				RecipeID: recipe.ID,
+				FoodID:   food.ID,
+				Quantity: ing.quantity,
+			}); err != nil {
+				log.Fatal(err)
+			}
+		}
+		createdRecipes++
+	}
+
+	fmt.Printf("Seeded %d users, %d foods, %d recipes, ~14 days of log entries each.\n",
+		len(createdUsers), len(createdFoods), createdRecipes)
 }

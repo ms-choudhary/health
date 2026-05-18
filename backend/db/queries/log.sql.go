@@ -11,20 +11,23 @@ import (
 
 const addLogEntry = `-- name: AddLogEntry :one
 INSERT INTO log_entries
-  (user_id, food_id, date, food_name, food_unit, calories_per_unit, quantity, calories)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, user_id, food_id, date, food_name, food_unit, calories_per_unit, quantity, calories
+  (user_id, food_id, date, food_name, food_unit, calories_per_unit, quantity, calories,
+   source_recipe_id, source_recipe_name)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id, user_id, food_id, date, food_name, food_unit, calories_per_unit, quantity, calories, source_recipe_id, source_recipe_name
 `
 
 type AddLogEntryParams struct {
-	UserID          int64   `json:"user_id"`
-	FoodID          *int64  `json:"food_id"`
-	Date            string  `json:"date"`
-	FoodName        string  `json:"food_name"`
-	FoodUnit        string  `json:"food_unit"`
-	CaloriesPerUnit float64 `json:"calories_per_unit"`
-	Quantity        float64 `json:"quantity"`
-	Calories        float64 `json:"calories"`
+	UserID           int64   `json:"user_id"`
+	FoodID           *int64  `json:"food_id"`
+	Date             string  `json:"date"`
+	FoodName         string  `json:"food_name"`
+	FoodUnit         string  `json:"food_unit"`
+	CaloriesPerUnit  float64 `json:"calories_per_unit"`
+	Quantity         float64 `json:"quantity"`
+	Calories         float64 `json:"calories"`
+	SourceRecipeID   *int64  `json:"source_recipe_id"`
+	SourceRecipeName *string `json:"source_recipe_name"`
 }
 
 func (q *Queries) AddLogEntry(ctx context.Context, arg AddLogEntryParams) (LogEntry, error) {
@@ -37,6 +40,8 @@ func (q *Queries) AddLogEntry(ctx context.Context, arg AddLogEntryParams) (LogEn
 		arg.CaloriesPerUnit,
 		arg.Quantity,
 		arg.Calories,
+		arg.SourceRecipeID,
+		arg.SourceRecipeName,
 	)
 	var i LogEntry
 	err := row.Scan(
@@ -49,8 +54,28 @@ func (q *Queries) AddLogEntry(ctx context.Context, arg AddLogEntryParams) (LogEn
 		&i.CaloriesPerUnit,
 		&i.Quantity,
 		&i.Calories,
+		&i.SourceRecipeID,
+		&i.SourceRecipeName,
 	)
 	return i, err
+}
+
+const deleteLogEntriesByRecipe = `-- name: DeleteLogEntriesByRecipe :exec
+DELETE FROM log_entries
+WHERE user_id = ?1
+  AND date    = ?2
+  AND source_recipe_id = ?3
+`
+
+type DeleteLogEntriesByRecipeParams struct {
+	UserID         int64  `json:"user_id"`
+	Date           string `json:"date"`
+	SourceRecipeID *int64 `json:"source_recipe_id"`
+}
+
+func (q *Queries) DeleteLogEntriesByRecipe(ctx context.Context, arg DeleteLogEntriesByRecipeParams) error {
+	_, err := q.db.ExecContext(ctx, deleteLogEntriesByRecipe, arg.UserID, arg.Date, arg.SourceRecipeID)
+	return err
 }
 
 const deleteLogEntry = `-- name: DeleteLogEntry :exec
@@ -68,7 +93,7 @@ func (q *Queries) DeleteLogEntry(ctx context.Context, arg DeleteLogEntryParams) 
 }
 
 const getLogForDate = `-- name: GetLogForDate :many
-SELECT id, user_id, food_id, date, food_name, food_unit, calories_per_unit, quantity, calories FROM log_entries
+SELECT id, user_id, food_id, date, food_name, food_unit, calories_per_unit, quantity, calories, source_recipe_id, source_recipe_name FROM log_entries
 WHERE user_id = ? AND date = ?
 ORDER BY id
 `
@@ -97,6 +122,8 @@ func (q *Queries) GetLogForDate(ctx context.Context, arg GetLogForDateParams) ([
 			&i.CaloriesPerUnit,
 			&i.Quantity,
 			&i.Calories,
+			&i.SourceRecipeID,
+			&i.SourceRecipeName,
 		); err != nil {
 			return nil, err
 		}
@@ -123,6 +150,7 @@ INNER JOIN (
   SELECT inner_le.food_name AS fn, MAX(inner_le.id) AS max_id
   FROM log_entries inner_le
   WHERE inner_le.user_id = ?1
+    AND inner_le.source_recipe_id IS NULL
   GROUP BY inner_le.food_name
 ) latest ON le.id = latest.max_id
 ORDER BY le.id DESC

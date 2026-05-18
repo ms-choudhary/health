@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 
 	"health/db/queries"
@@ -75,14 +76,16 @@ func (h *Handler) AddLogEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	entry, err := h.Q.AddLogEntry(r.Context(), queries.AddLogEntryParams{
-		UserID:          userID,
-		FoodID:          body.FoodID,
-		Date:            body.Date,
-		FoodName:        body.FoodName,
-		FoodUnit:        body.FoodUnit,
-		CaloriesPerUnit: body.CaloriesPerUnit,
-		Quantity:        body.Quantity,
-		Calories:        body.CaloriesPerUnit * body.Quantity,
+		UserID:           userID,
+		FoodID:           body.FoodID,
+		Date:             body.Date,
+		FoodName:         body.FoodName,
+		FoodUnit:         body.FoodUnit,
+		CaloriesPerUnit:  body.CaloriesPerUnit,
+		Quantity:         body.Quantity,
+		Calories:         body.CaloriesPerUnit * body.Quantity,
+		SourceRecipeID:   nil,
+		SourceRecipeName: nil,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -105,6 +108,33 @@ func (h *Handler) DeleteLogEntry(w http.ResponseWriter, r *http.Request) {
 	if err := h.Q.DeleteLogEntry(r.Context(), queries.DeleteLogEntryParams{
 		ID:     entryID,
 		UserID: userID,
+	}); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) DeleteLogEntriesByRecipe(w http.ResponseWriter, r *http.Request) {
+	userID, err := parseID(r, "id")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	date := r.URL.Query().Get("date")
+	if !validDate(date) {
+		writeError(w, http.StatusBadRequest, "date must be YYYY-MM-DD")
+		return
+	}
+	srid, err := strconv.ParseInt(r.URL.Query().Get("source_recipe_id"), 10, 64)
+	if err != nil || srid <= 0 {
+		writeError(w, http.StatusBadRequest, "source_recipe_id required")
+		return
+	}
+	if err := h.Q.DeleteLogEntriesByRecipe(r.Context(), queries.DeleteLogEntriesByRecipeParams{
+		UserID:         userID,
+		Date:           date,
+		SourceRecipeID: &srid,
 	}); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return

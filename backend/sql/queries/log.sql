@@ -15,6 +15,7 @@ INNER JOIN (
   SELECT inner_le.food_name AS fn, MAX(inner_le.id) AS max_id
   FROM log_entries inner_le
   WHERE inner_le.user_id = ?1
+    AND inner_le.source_recipe_id IS NULL
   GROUP BY inner_le.food_name
 ) latest ON le.id = latest.max_id
 ORDER BY le.id DESC
@@ -22,12 +23,19 @@ LIMIT 20;
 
 -- name: AddLogEntry :one
 INSERT INTO log_entries
-  (user_id, food_id, date, food_name, food_unit, calories_per_unit, quantity, calories)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  (user_id, food_id, date, food_name, food_unit, calories_per_unit, quantity, calories,
+   source_recipe_id, source_recipe_name)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: DeleteLogEntry :exec
 DELETE FROM log_entries WHERE id = ? AND user_id = ?;
+
+-- name: DeleteLogEntriesByRecipe :exec
+DELETE FROM log_entries
+WHERE user_id = ?1
+  AND date    = ?2
+  AND source_recipe_id = ?3;
 
 -- name: SumCaloriesByDateRange :many
 SELECT

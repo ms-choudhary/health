@@ -23,6 +23,8 @@ export interface LogEntry {
   calories_per_unit: number
   quantity: number
   calories: number
+  source_recipe_id: number | null
+  source_recipe_name: string | null
 }
 
 export interface RecentFood {
@@ -69,3 +71,47 @@ export interface CreateFoodPayload {
   unit: string
   calories_per_unit: number
 }
+
+export interface Recipe {
+  id: number
+  name: string
+  created_at: string
+}
+
+export interface RecipeListItem extends Recipe {
+  total_calories: number
+}
+
+export interface RecipeIngredient {
+  id: number
+  recipe_id: number
+  food_id: number
+  quantity: number
+  food_name: string
+  food_unit: string
+  calories_per_unit: number
+}
+
+export interface RecipeWithIngredients extends RecipeListItem {
+  ingredients: RecipeIngredient[]
+}
+
+export interface RecipeIngredientInput {
+  food_id: number
+  quantity: number
+}
+
+export interface RecipePayload {
+  name: string
+  ingredients: RecipeIngredientInput[]
+}
+
+export interface LogRecipePayload {
+  recipe_id: number
+  scale: number
+  date: string
+}
+
+export type Pickable =
+  | { kind: 'food'; food: Food }
+  | { kind: 'recipe'; recipe: RecipeListItem }

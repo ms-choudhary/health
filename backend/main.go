@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"health/db"
@@ -27,7 +28,7 @@ func main() {
 	}
 	defer database.Close()
 
-	h := handlers.New(database.Queries)
+	h := handlers.New(database.Conn, database.Queries)
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, _ *http.Request) {
@@ -46,8 +47,16 @@ func main() {
 
 	mux.HandleFunc("GET /api/users/{id}/log", h.GetLog)
 	mux.HandleFunc("POST /api/users/{id}/log", h.AddLogEntry)
+	mux.HandleFunc("DELETE /api/users/{id}/log/recipe", h.DeleteLogEntriesByRecipe)
+	mux.HandleFunc("POST /api/users/{id}/log/recipe", h.LogRecipe)
 	mux.HandleFunc("DELETE /api/users/{id}/log/{eid}", h.DeleteLogEntry)
 	mux.HandleFunc("GET /api/users/{id}/recent-foods", h.GetRecentFoods)
+
+	mux.HandleFunc("GET /api/recipes", h.ListRecipes)
+	mux.HandleFunc("POST /api/recipes", h.CreateRecipe)
+	mux.HandleFunc("GET /api/recipes/{id}", h.GetRecipe)
+	mux.HandleFunc("PUT /api/recipes/{id}", h.UpdateRecipe)
+	mux.HandleFunc("DELETE /api/recipes/{id}", h.DeleteRecipe)
 
 	mux.HandleFunc("GET /api/users/{id}/metrics", h.GetMetrics)
 	mux.HandleFunc("PUT /api/users/{id}/metrics", h.UpsertMetrics)
@@ -71,6 +80,12 @@ func main() {
 
 func spaHandler(root string, fs http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte(`{"error":"not found"}`))
+			return
+		}
 		path := filepath.Join(root, filepath.Clean(r.URL.Path))
 		if info, err := os.Stat(path); err != nil || info.IsDir() {
 			http.ServeFile(w, r, filepath.Join(root, "index.html"))

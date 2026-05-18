@@ -12,7 +12,17 @@ import {
 } from 'date-fns'
 import { api } from '@/lib/api'
 import { useUserStore } from '@/stores/user'
-import type { LogEntry, DailyMetric, AddLogPayload } from '@/lib/types'
+import type { LogEntry, DailyMetric } from '@/lib/types'
+
+type LogGroup =
+  | { kind: 'single'; entry: LogEntry }
+  | {
+      kind: 'recipe'
+      recipeId: number
+      recipeName: string
+      entries: LogEntry[]
+      totalCalories: number
+    }
 import { formatNumber } from '@/lib/utils'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
@@ -50,6 +60,41 @@ const totalCalories = computed(() =>
   Math.round(entries.value.reduce((s, e) => s + e.calories, 0)),
 )
 const user = computed(() => userStore.findById(props.userId))
+
+const groups = computed<LogGroup[]>(() => {
+  const out: LogGroup[] = []
+  const recipeMap = new Map<number, LogEntry[]>()
+  const order: Array<{ kind: 'single'; entry: LogEntry } | { kind: 'recipe'; recipeId: number }> = []
+  for (const e of entries.value) {
+    if (e.source_recipe_id != null) {
+      const arr = recipeMap.get(e.source_recipe_id)
+      if (arr) {
+        arr.push(e)
+      } else {
+        recipeMap.set(e.source_recipe_id, [e])
+        order.push({ kind: 'recipe', recipeId: e.source_recipe_id })
+      }
+    } else {
+      order.push({ kind: 'single', entry: e })
+    }
+  }
+  for (const item of order) {
+    if (item.kind === 'single') {
+      out.push({ kind: 'single', entry: item.entry })
+      continue
+    }
+    const arr = recipeMap.get(item.recipeId)
+    if (!arr || arr.length === 0) continue
+    out.push({
+      kind: 'recipe',
+      recipeId: item.recipeId,
+      recipeName: arr[0].source_recipe_name ?? 'Recipe',
+      entries: arr,
+      totalCalories: arr.reduce((s, e) => s + e.calories, 0),
+    })
+  }
+  return out
+})
 
 function prevDay() {
   date.value = format(addDays(parseISO(date.value), -1), 'yyyy-MM-dd')
@@ -125,7 +170,12 @@ async function removeEntry(id: number) {
   entries.value = entries.value.filter((e) => e.id !== id)
 }
 
-async function onFoodAdded(_payload: AddLogPayload) {
+async function removeRecipeGroup(recipeId: number) {
+  await api.deleteLogRecipeGroup(props.userId, date.value, recipeId)
+  entries.value = entries.value.filter((e) => e.source_recipe_id !== recipeId)
+}
+
+async function onFoodAdded() {
   showDrawer.value = false
   await loadLog()
 }
@@ -182,19 +232,67 @@ onMounted(async () => {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="e in entries" :key="e.id" class="border-b border-border last:border-0">
-              <td class="px-3 py-2">
-                <div>{{ e.food_name }}</div>
-                <div class="text-xs text-muted-foreground">{{ e.food_unit }}</div>
-              </td>
-              <td class="text-right px-3 py-2">{{ formatNumber(e.quantity, e.quantity % 1 ? 1 : 0) }}</td>
-              <td class="text-right px-3 py-2">{{ Math.round(e.calories) }}</td>
-              <td class="px-1">
-                <Button variant="ghost" size="icon" @click="removeEntry(e.id)">
-                  <Trash2 class="h-4 w-4" />
-                </Button>
-              </td>
-            </tr>
+            <template
+              v-for="g in groups"
+              :key="g.kind === 'single' ? `s-${g.entry.id}` : `r-${g.recipeId}`"
+            >
+              <tr v-if="g.kind === 'single'" class="border-b border-border last:border-0">
+                <td class="px-3 py-2">
+                  <div>{{ g.entry.food_name }}</div>
+                  <div class="text-xs text-muted-foreground">{{ g.entry.food_unit }}</div>
+                </td>
+                <td class="text-right px-3 py-2">
+                  {{ formatNumber(g.entry.quantity, g.entry.quantity % 1 ? 1 : 0) }}
+                </td>
+                <td class="text-right px-3 py-2">{{ Math.round(g.entry.calories) }}</td>
+                <td class="px-1">
+                  <Button variant="ghost" size="icon" @click="removeEntry(g.entry.id)">
+                    <Trash2 class="h-4 w-4" />
+                  </Button>
+                </td>
+              </tr>
+              <template v-else>
+                <tr class="border-b border-border bg-muted/40">
+                  <td class="px-3 py-2">
+                    <div class="flex items-center gap-2">
+                      <span class="font-medium">{{ g.recipeName }}</span>
+                      <span class="text-[10px] uppercase tracking-wide text-muted-foreground rounded bg-muted px-1.5 py-0.5">
+                        Recipe
+                      </span>
+                    </div>
+                    <div class="text-xs text-muted-foreground">
+                      {{ g.entries.length }} ingredient{{ g.entries.length === 1 ? '' : 's' }}
+                    </div>
+                  </td>
+                  <td class="text-right px-3 py-2 text-muted-foreground">—</td>
+                  <td class="text-right px-3 py-2 font-medium">
+                    {{ Math.round(g.totalCalories) }}
+                  </td>
+                  <td class="px-1">
+                    <Button variant="ghost" size="icon" @click="removeRecipeGroup(g.recipeId)">
+                      <Trash2 class="h-4 w-4" />
+                    </Button>
+                  </td>
+                </tr>
+                <tr
+                  v-for="e in g.entries"
+                  :key="`re-${e.id}`"
+                  class="border-b border-border last:border-0"
+                >
+                  <td class="px-3 py-2 pl-6">
+                    <div class="text-muted-foreground">↳ {{ e.food_name }}</div>
+                    <div class="text-xs text-muted-foreground">{{ e.food_unit }}</div>
+                  </td>
+                  <td class="text-right px-3 py-2 text-muted-foreground">
+                    {{ formatNumber(e.quantity, e.quantity % 1 ? 1 : 0) }}
+                  </td>
+                  <td class="text-right px-3 py-2 text-muted-foreground">
+                    {{ Math.round(e.calories) }}
+                  </td>
+                  <td class="px-1" />
+                </tr>
+              </template>
+            </template>
           </tbody>
         </table>
         <div class="px-3 py-3 border-t border-border flex justify-between font-semibold">

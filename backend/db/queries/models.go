@@ -22,15 +22,30 @@ type Food struct {
 }
 
 type LogEntry struct {
-	ID              int64   `json:"id"`
-	UserID          int64   `json:"user_id"`
-	FoodID          *int64  `json:"food_id"`
-	Date            string  `json:"date"`
-	FoodName        string  `json:"food_name"`
-	FoodUnit        string  `json:"food_unit"`
-	CaloriesPerUnit float64 `json:"calories_per_unit"`
-	Quantity        float64 `json:"quantity"`
-	Calories        float64 `json:"calories"`
+	ID               int64   `json:"id"`
+	UserID           int64   `json:"user_id"`
+	FoodID           *int64  `json:"food_id"`
+	Date             string  `json:"date"`
+	FoodName         string  `json:"food_name"`
+	FoodUnit         string  `json:"food_unit"`
+	CaloriesPerUnit  float64 `json:"calories_per_unit"`
+	Quantity         float64 `json:"quantity"`
+	Calories         float64 `json:"calories"`
+	SourceRecipeID   *int64  `json:"source_recipe_id"`
+	SourceRecipeName *string `json:"source_recipe_name"`
+}
+
+type Recipe struct {
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	CreatedAt string `json:"created_at"`
+}
+
+type RecipeIngredient struct {
+	ID       int64   `json:"id"`
+	RecipeID int64   `json:"recipe_id"`
+	FoodID   int64   `json:"food_id"`
+	Quantity float64 `json:"quantity"`
 }
 
 type User struct {
