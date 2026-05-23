@@ -13,6 +13,7 @@ type metricsResponse struct {
 	Weight           *float64 `json:"weight"`
 	Steps            *int64   `json:"steps"`
 	CaloriesConsumed float64  `json:"calories_consumed"`
+	ProteinConsumed  float64  `json:"protein_consumed"`
 }
 
 func (h *Handler) GetMetrics(w http.ResponseWriter, r *http.Request) {
@@ -36,7 +37,7 @@ func (h *Handler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	calRows, err := h.Q.SumCaloriesByDateRange(r.Context(), queries.SumCaloriesByDateRangeParams{
+	nutritionRows, err := h.Q.SumNutritionByDateRange(r.Context(), queries.SumNutritionByDateRangeParams{
 		UserID:   userID,
 		FromDate: from,
 		ToDate:   to,
@@ -45,9 +46,11 @@ func (h *Handler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	calByDate := make(map[string]float64, len(calRows))
-	for _, c := range calRows {
-		calByDate[c.Date] = c.TotalCalories
+	calByDate := make(map[string]float64, len(nutritionRows))
+	protByDate := make(map[string]float64, len(nutritionRows))
+	for _, n := range nutritionRows {
+		calByDate[n.Date] = n.TotalCalories
+		protByDate[n.Date] = n.TotalProtein
 	}
 	out := make([]metricsResponse, 0, len(metrics))
 	for _, m := range metrics {
@@ -58,6 +61,7 @@ func (h *Handler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 			Weight:           m.Weight,
 			Steps:            m.Steps,
 			CaloriesConsumed: calByDate[m.Date],
+			ProteinConsumed:  protByDate[m.Date],
 		})
 	}
 	writeJSON(w, http.StatusOK, out)
@@ -117,7 +121,9 @@ func (h *Handler) GetTodaySummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]float64{
-		"consumed": row.Consumed,
-		"target":   float64(row.Target),
+		"consumed":         row.Consumed,
+		"target":           float64(row.Target),
+		"protein_consumed": row.ProteinConsumed,
+		"target_protein":   float64(row.TargetProtein),
 	})
 }

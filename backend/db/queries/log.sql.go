@@ -11,10 +11,12 @@ import (
 
 const addLogEntry = `-- name: AddLogEntry :one
 INSERT INTO log_entries
-  (user_id, food_id, date, food_name, food_unit, calories_per_unit, quantity, calories,
+  (user_id, food_id, date, food_name, food_unit,
+   calories_per_unit, protein_per_unit,
+   quantity, calories, protein,
    source_recipe_id, source_recipe_name)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, user_id, food_id, date, food_name, food_unit, calories_per_unit, quantity, calories, source_recipe_id, source_recipe_name
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id, user_id, food_id, date, food_name, food_unit, calories_per_unit, protein_per_unit, quantity, calories, protein, source_recipe_id, source_recipe_name
 `
 
 type AddLogEntryParams struct {
@@ -24,8 +26,10 @@ type AddLogEntryParams struct {
 	FoodName         string  `json:"food_name"`
 	FoodUnit         string  `json:"food_unit"`
 	CaloriesPerUnit  float64 `json:"calories_per_unit"`
+	ProteinPerUnit   float64 `json:"protein_per_unit"`
 	Quantity         float64 `json:"quantity"`
 	Calories         float64 `json:"calories"`
+	Protein          float64 `json:"protein"`
 	SourceRecipeID   *int64  `json:"source_recipe_id"`
 	SourceRecipeName *string `json:"source_recipe_name"`
 }
@@ -38,8 +42,10 @@ func (q *Queries) AddLogEntry(ctx context.Context, arg AddLogEntryParams) (LogEn
 		arg.FoodName,
 		arg.FoodUnit,
 		arg.CaloriesPerUnit,
+		arg.ProteinPerUnit,
 		arg.Quantity,
 		arg.Calories,
+		arg.Protein,
 		arg.SourceRecipeID,
 		arg.SourceRecipeName,
 	)
@@ -52,8 +58,10 @@ func (q *Queries) AddLogEntry(ctx context.Context, arg AddLogEntryParams) (LogEn
 		&i.FoodName,
 		&i.FoodUnit,
 		&i.CaloriesPerUnit,
+		&i.ProteinPerUnit,
 		&i.Quantity,
 		&i.Calories,
+		&i.Protein,
 		&i.SourceRecipeID,
 		&i.SourceRecipeName,
 	)
@@ -93,7 +101,7 @@ func (q *Queries) DeleteLogEntry(ctx context.Context, arg DeleteLogEntryParams) 
 }
 
 const getLogForDate = `-- name: GetLogForDate :many
-SELECT id, user_id, food_id, date, food_name, food_unit, calories_per_unit, quantity, calories, source_recipe_id, source_recipe_name FROM log_entries
+SELECT id, user_id, food_id, date, food_name, food_unit, calories_per_unit, protein_per_unit, quantity, calories, protein, source_recipe_id, source_recipe_name FROM log_entries
 WHERE user_id = ? AND date = ?
 ORDER BY id
 `
@@ -120,8 +128,10 @@ func (q *Queries) GetLogForDate(ctx context.Context, arg GetLogForDateParams) ([
 			&i.FoodName,
 			&i.FoodUnit,
 			&i.CaloriesPerUnit,
+			&i.ProteinPerUnit,
 			&i.Quantity,
 			&i.Calories,
+			&i.Protein,
 			&i.SourceRecipeID,
 			&i.SourceRecipeName,
 		); err != nil {
@@ -143,6 +153,7 @@ SELECT
   le.food_name,
   le.food_unit,
   le.calories_per_unit,
+  le.protein_per_unit,
   le.food_id,
   le.quantity AS last_quantity
 FROM log_entries le
@@ -161,6 +172,7 @@ type GetRecentLoggedFoodsRow struct {
 	FoodName        string  `json:"food_name"`
 	FoodUnit        string  `json:"food_unit"`
 	CaloriesPerUnit float64 `json:"calories_per_unit"`
+	ProteinPerUnit  float64 `json:"protein_per_unit"`
 	FoodID          *int64  `json:"food_id"`
 	LastQuantity    float64 `json:"last_quantity"`
 }
@@ -178,6 +190,7 @@ func (q *Queries) GetRecentLoggedFoods(ctx context.Context, userID int64) ([]Get
 			&i.FoodName,
 			&i.FoodUnit,
 			&i.CaloriesPerUnit,
+			&i.ProteinPerUnit,
 			&i.FoodID,
 			&i.LastQuantity,
 		); err != nil {
@@ -194,10 +207,11 @@ func (q *Queries) GetRecentLoggedFoods(ctx context.Context, userID int64) ([]Get
 	return items, nil
 }
 
-const sumCaloriesByDateRange = `-- name: SumCaloriesByDateRange :many
+const sumNutritionByDateRange = `-- name: SumNutritionByDateRange :many
 SELECT
   date,
-  CAST(COALESCE(SUM(calories), 0) AS REAL) AS total_calories
+  CAST(COALESCE(SUM(calories), 0) AS REAL) AS total_calories,
+  CAST(COALESCE(SUM(protein),  0) AS REAL) AS total_protein
 FROM log_entries
 WHERE user_id = ?1
   AND date >= ?2
@@ -206,27 +220,28 @@ GROUP BY date
 ORDER BY date
 `
 
-type SumCaloriesByDateRangeParams struct {
+type SumNutritionByDateRangeParams struct {
 	UserID   int64  `json:"user_id"`
 	FromDate string `json:"from_date"`
 	ToDate   string `json:"to_date"`
 }
 
-type SumCaloriesByDateRangeRow struct {
+type SumNutritionByDateRangeRow struct {
 	Date          string  `json:"date"`
 	TotalCalories float64 `json:"total_calories"`
+	TotalProtein  float64 `json:"total_protein"`
 }
 
-func (q *Queries) SumCaloriesByDateRange(ctx context.Context, arg SumCaloriesByDateRangeParams) ([]SumCaloriesByDateRangeRow, error) {
-	rows, err := q.db.QueryContext(ctx, sumCaloriesByDateRange, arg.UserID, arg.FromDate, arg.ToDate)
+func (q *Queries) SumNutritionByDateRange(ctx context.Context, arg SumNutritionByDateRangeParams) ([]SumNutritionByDateRangeRow, error) {
+	rows, err := q.db.QueryContext(ctx, sumNutritionByDateRange, arg.UserID, arg.FromDate, arg.ToDate)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []SumCaloriesByDateRangeRow
+	var items []SumNutritionByDateRangeRow
 	for rows.Next() {
-		var i SumCaloriesByDateRangeRow
-		if err := rows.Scan(&i.Date, &i.TotalCalories); err != nil {
+		var i SumNutritionByDateRangeRow
+		if err := rows.Scan(&i.Date, &i.TotalCalories, &i.TotalProtein); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

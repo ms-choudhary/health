@@ -3,6 +3,7 @@ export interface User {
   name: string
   avatar: string
   target_calories: number
+  target_protein: number
   created_at: string
 }
 
@@ -11,6 +12,7 @@ export interface Food {
   name: string
   unit: string
   calories_per_unit: number
+  protein_per_unit: number
   created_at: string
 }
 
@@ -22,8 +24,10 @@ export interface LogEntry {
   food_name: string
   food_unit: string
   calories_per_unit: number
+  protein_per_unit: number
   quantity: number
   calories: number
+  protein: number
   source_recipe_id: number | null
   source_recipe_name: string | null
 }
@@ -32,6 +36,7 @@ export interface RecentFood {
   food_name: string
   food_unit: string
   calories_per_unit: number
+  protein_per_unit: number
   food_id: number | null
   last_quantity: number
 }
@@ -43,6 +48,7 @@ export interface DailyMetric {
   weight: number | null
   steps: number | null
   calories_consumed: number
+  protein_consumed: number
 }
 
 export interface MetricsUpdate {
@@ -54,16 +60,20 @@ export interface MetricsUpdate {
 export interface CreateUserPayload {
   name: string
   target_calories: number
+  target_protein: number
 }
 
 export interface UpdateUserPayload {
   name?: string
   target_calories?: number
+  target_protein?: number
 }
 
 export interface TodaySummary {
   consumed: number
   target: number
+  protein_consumed: number
+  target_protein: number
 }
 
 export interface AddLogPayload {
@@ -71,6 +81,7 @@ export interface AddLogPayload {
   food_name: string
   food_unit: string
   calories_per_unit: number
+  protein_per_unit: number
   quantity: number
   date: string
 }
@@ -79,10 +90,12 @@ export interface CreateFoodPayload {
   name: string
   unit: string
   calories_per_unit: number
+  protein_per_unit: number
 }
 
 export interface UpdateFoodPayload {
   calories_per_unit: number
+  protein_per_unit: number
 }
 
 export interface Recipe {
@@ -93,6 +106,7 @@ export interface Recipe {
 
 export interface RecipeListItem extends Recipe {
   total_calories: number
+  total_protein: number
 }
 
 export interface RecipeIngredient {
@@ -103,6 +117,7 @@ export interface RecipeIngredient {
   food_name: string
   food_unit: string
   calories_per_unit: number
+  protein_per_unit: number
 }
 
 export interface RecipeWithIngredients extends RecipeListItem {

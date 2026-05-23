@@ -17,6 +17,7 @@ type Food struct {
 	Name            string  `json:"name"`
 	Unit            string  `json:"unit"`
 	CaloriesPerUnit float64 `json:"calories_per_unit"`
+	ProteinPerUnit  float64 `json:"protein_per_unit"`
 	CreatedAt       string  `json:"created_at"`
 }
 
@@ -28,8 +29,10 @@ type LogEntry struct {
 	FoodName         string  `json:"food_name"`
 	FoodUnit         string  `json:"food_unit"`
 	CaloriesPerUnit  float64 `json:"calories_per_unit"`
+	ProteinPerUnit   float64 `json:"protein_per_unit"`
 	Quantity         float64 `json:"quantity"`
 	Calories         float64 `json:"calories"`
+	Protein          float64 `json:"protein"`
 	SourceRecipeID   *int64  `json:"source_recipe_id"`
 	SourceRecipeName *string `json:"source_recipe_name"`
 }
@@ -52,5 +55,6 @@ type User struct {
 	Name           string `json:"name"`
 	Avatar         string `json:"avatar"`
 	TargetCalories int64  `json:"target_calories"`
+	TargetProtein  int64  `json:"target_protein"`
 	CreatedAt      string `json:"created_at"`
 }

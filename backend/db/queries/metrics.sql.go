@@ -79,20 +79,30 @@ const getTodaySummary = `-- name: GetTodaySummary :one
 SELECT
   CAST(COALESCE((SELECT SUM(le.calories) FROM log_entries le
             WHERE le.user_id = u.id AND le.date = date('now')), 0) AS REAL) AS consumed,
-  u.target_calories AS target
+  CAST(COALESCE((SELECT SUM(le.protein) FROM log_entries le
+            WHERE le.user_id = u.id AND le.date = date('now')), 0) AS REAL) AS protein_consumed,
+  u.target_calories AS target,
+  u.target_protein  AS target_protein
 FROM users u
 WHERE u.id = ?
 `
 
 type GetTodaySummaryRow struct {
-	Consumed float64 `json:"consumed"`
-	Target   int64   `json:"target"`
+	Consumed        float64 `json:"consumed"`
+	ProteinConsumed float64 `json:"protein_consumed"`
+	Target          int64   `json:"target"`
+	TargetProtein   int64   `json:"target_protein"`
 }
 
 func (q *Queries) GetTodaySummary(ctx context.Context, id int64) (GetTodaySummaryRow, error) {
 	row := q.db.QueryRowContext(ctx, getTodaySummary, id)
 	var i GetTodaySummaryRow
-	err := row.Scan(&i.Consumed, &i.Target)
+	err := row.Scan(
+		&i.Consumed,
+		&i.ProteinConsumed,
+		&i.Target,
+		&i.TargetProtein,
+	)
 	return i, err
 }
 

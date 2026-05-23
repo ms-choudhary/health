@@ -20,10 +20,11 @@ type recipeBody struct {
 }
 
 type recipeDetailResponse struct {
-	ID            int64                            `json:"id"`
-	Name          string                           `json:"name"`
-	CreatedAt     string                           `json:"created_at"`
-	TotalCalories float64                          `json:"total_calories"`
+	ID            int64                             `json:"id"`
+	Name          string                            `json:"name"`
+	CreatedAt     string                            `json:"created_at"`
+	TotalCalories float64                           `json:"total_calories"`
+	TotalProtein  float64                           `json:"total_protein"`
 	Ingredients   []queries.GetRecipeIngredientsRow `json:"ingredients"`
 }
 
@@ -82,15 +83,17 @@ func (h *Handler) GetRecipe(w http.ResponseWriter, r *http.Request) {
 	if ings == nil {
 		ings = []queries.GetRecipeIngredientsRow{}
 	}
-	var total float64
+	var totalCal, totalProt float64
 	for _, ing := range ings {
-		total += ing.CaloriesPerUnit * ing.Quantity
+		totalCal += ing.CaloriesPerUnit * ing.Quantity
+		totalProt += ing.ProteinPerUnit * ing.Quantity
 	}
 	writeJSON(w, http.StatusOK, recipeDetailResponse{
 		ID:            recipe.ID,
 		Name:          recipe.Name,
 		CreatedAt:     recipe.CreatedAt,
-		TotalCalories: total,
+		TotalCalories: totalCal,
+		TotalProtein:  totalProt,
 		Ingredients:   ings,
 	})
 }
@@ -280,8 +283,10 @@ func (h *Handler) LogRecipe(w http.ResponseWriter, r *http.Request) {
 			FoodName:         ing.FoodName,
 			FoodUnit:         ing.FoodUnit,
 			CaloriesPerUnit:  ing.CaloriesPerUnit,
+			ProteinPerUnit:   ing.ProteinPerUnit,
 			Quantity:         qty,
 			Calories:         ing.CaloriesPerUnit * qty,
+			Protein:          ing.ProteinPerUnit * qty,
 			SourceRecipeID:   &recipeID,
 			SourceRecipeName: &recipeName,
 		})

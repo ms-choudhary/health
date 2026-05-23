@@ -20,6 +20,7 @@ const loading = ref(true)
 const showAdd = ref(false)
 const newName = ref<string>('')
 const newTarget = ref<string>('2000')
+const newProtein = ref<string>('0')
 const adding = ref(false)
 const errMsg = ref('')
 
@@ -46,18 +47,36 @@ async function load() {
 async function submitAdd() {
   const name = newName.value.trim()
   const t = Number(newTarget.value)
+  const p = Number(newProtein.value)
   if (!name) return
   if (!Number.isFinite(t) || t <= 0) {
     errMsg.value = 'Daily calorie target must be a positive number'
     return
   }
+  if (!Number.isFinite(p) || p < 0) {
+    errMsg.value = 'Daily protein target must be >= 0'
+    return
+  }
   adding.value = true
   errMsg.value = ''
   try {
-    const u = await userStore.add({ name, target_calories: Math.round(t) })
-    summaries.value = { ...summaries.value, [u.id]: { consumed: 0, target: u.target_calories } }
+    const u = await userStore.add({
+      name,
+      target_calories: Math.round(t),
+      target_protein: Math.round(p),
+    })
+    summaries.value = {
+      ...summaries.value,
+      [u.id]: {
+        consumed: 0,
+        target: u.target_calories,
+        protein_consumed: 0,
+        target_protein: u.target_protein,
+      },
+    }
     newName.value = ''
     newTarget.value = '2000'
+    newProtein.value = '0'
     showAdd.value = false
   } catch (e) {
     errMsg.value = e instanceof Error ? e.message : 'Failed to add user'
@@ -141,6 +160,18 @@ onMounted(load)
           @keyup.enter="submitAdd"
         />
         <p class="text-xs text-muted-foreground">Daily calorie target (kcal)</p>
+      </div>
+      <div class="flex flex-col gap-1">
+        <Input
+          v-model="newProtein"
+          type="number"
+          inputmode="numeric"
+          min="0"
+          step="5"
+          placeholder="Daily protein target"
+          @keyup.enter="submitAdd"
+        />
+        <p class="text-xs text-muted-foreground">Daily protein target (g) — 0 if not tracking</p>
       </div>
       <p v-if="errMsg" class="text-sm text-destructive">{{ errMsg }}</p>
       <div class="flex justify-end gap-2">

@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS users (
   name            TEXT    NOT NULL,
   avatar          TEXT    NOT NULL,
   target_calories INTEGER NOT NULL DEFAULT 2000,
+  target_protein  INTEGER NOT NULL DEFAULT 0,
   created_at      TEXT    NOT NULL DEFAULT (date('now'))
 );
 
@@ -11,6 +12,7 @@ CREATE TABLE IF NOT EXISTS foods (
   name              TEXT NOT NULL,
   unit              TEXT NOT NULL DEFAULT 'g',
   calories_per_unit REAL NOT NULL,
+  protein_per_unit  REAL NOT NULL DEFAULT 0,
   created_at        TEXT NOT NULL DEFAULT (date('now'))
 );
 
@@ -22,8 +24,10 @@ CREATE TABLE IF NOT EXISTS log_entries (
   food_name           TEXT NOT NULL,
   food_unit           TEXT NOT NULL,
   calories_per_unit   REAL NOT NULL,
+  protein_per_unit    REAL NOT NULL DEFAULT 0,
   quantity            REAL NOT NULL,
   calories            REAL NOT NULL,
+  protein             REAL NOT NULL DEFAULT 0,
   source_recipe_id    INTEGER,
   source_recipe_name  TEXT
 );

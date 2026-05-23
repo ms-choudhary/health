@@ -10,25 +10,32 @@ import (
 )
 
 const createFood = `-- name: CreateFood :one
-INSERT INTO foods (name, unit, calories_per_unit)
-VALUES (?, ?, ?)
-RETURNING id, name, unit, calories_per_unit, created_at
+INSERT INTO foods (name, unit, calories_per_unit, protein_per_unit)
+VALUES (?, ?, ?, ?)
+RETURNING id, name, unit, calories_per_unit, protein_per_unit, created_at
 `
 
 type CreateFoodParams struct {
 	Name            string  `json:"name"`
 	Unit            string  `json:"unit"`
 	CaloriesPerUnit float64 `json:"calories_per_unit"`
+	ProteinPerUnit  float64 `json:"protein_per_unit"`
 }
 
 func (q *Queries) CreateFood(ctx context.Context, arg CreateFoodParams) (Food, error) {
-	row := q.db.QueryRowContext(ctx, createFood, arg.Name, arg.Unit, arg.CaloriesPerUnit)
+	row := q.db.QueryRowContext(ctx, createFood,
+		arg.Name,
+		arg.Unit,
+		arg.CaloriesPerUnit,
+		arg.ProteinPerUnit,
+	)
 	var i Food
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Unit,
 		&i.CaloriesPerUnit,
+		&i.ProteinPerUnit,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -44,7 +51,7 @@ func (q *Queries) DeleteFood(ctx context.Context, id int64) error {
 }
 
 const getFood = `-- name: GetFood :one
-SELECT id, name, unit, calories_per_unit, created_at FROM foods WHERE id = ?
+SELECT id, name, unit, calories_per_unit, protein_per_unit, created_at FROM foods WHERE id = ?
 `
 
 func (q *Queries) GetFood(ctx context.Context, id int64) (Food, error) {
@@ -55,13 +62,14 @@ func (q *Queries) GetFood(ctx context.Context, id int64) (Food, error) {
 		&i.Name,
 		&i.Unit,
 		&i.CaloriesPerUnit,
+		&i.ProteinPerUnit,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const listFoods = `-- name: ListFoods :many
-SELECT id, name, unit, calories_per_unit, created_at FROM foods
+SELECT id, name, unit, calories_per_unit, protein_per_unit, created_at FROM foods
 WHERE name LIKE '%' || ?1 || '%'
 ORDER BY name
 `
@@ -80,6 +88,7 @@ func (q *Queries) ListFoods(ctx context.Context, search *string) ([]Food, error)
 			&i.Name,
 			&i.Unit,
 			&i.CaloriesPerUnit,
+			&i.ProteinPerUnit,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -98,40 +107,46 @@ func (q *Queries) ListFoods(ctx context.Context, search *string) ([]Food, error)
 const restampLogEntriesForFood = `-- name: RestampLogEntriesForFood :exec
 UPDATE log_entries
 SET calories_per_unit = ?1,
-    calories          = ?1 * quantity
-WHERE food_id = ?2
+    calories          = ?1 * quantity,
+    protein_per_unit  = ?2,
+    protein           = ?2 * quantity
+WHERE food_id = ?3
 `
 
 type RestampLogEntriesForFoodParams struct {
 	CaloriesPerUnit float64 `json:"calories_per_unit"`
+	ProteinPerUnit  float64 `json:"protein_per_unit"`
 	FoodID          *int64  `json:"food_id"`
 }
 
 func (q *Queries) RestampLogEntriesForFood(ctx context.Context, arg RestampLogEntriesForFoodParams) error {
-	_, err := q.db.ExecContext(ctx, restampLogEntriesForFood, arg.CaloriesPerUnit, arg.FoodID)
+	_, err := q.db.ExecContext(ctx, restampLogEntriesForFood, arg.CaloriesPerUnit, arg.ProteinPerUnit, arg.FoodID)
 	return err
 }
 
-const updateFoodCalories = `-- name: UpdateFoodCalories :one
+const updateFoodNutrition = `-- name: UpdateFoodNutrition :one
 UPDATE foods
-SET calories_per_unit = ?
+SET calories_per_unit = ?,
+    protein_per_unit  = ?
 WHERE id = ?
-RETURNING id, name, unit, calories_per_unit, created_at
+RETURNING id, name, unit, calories_per_unit, protein_per_unit, created_at
 `
 
-type UpdateFoodCaloriesParams struct {
+type UpdateFoodNutritionParams struct {
 	CaloriesPerUnit float64 `json:"calories_per_unit"`
+	ProteinPerUnit  float64 `json:"protein_per_unit"`
 	ID              int64   `json:"id"`
 }
 
-func (q *Queries) UpdateFoodCalories(ctx context.Context, arg UpdateFoodCaloriesParams) (Food, error) {
-	row := q.db.QueryRowContext(ctx, updateFoodCalories, arg.CaloriesPerUnit, arg.ID)
+func (q *Queries) UpdateFoodNutrition(ctx context.Context, arg UpdateFoodNutritionParams) (Food, error) {
+	row := q.db.QueryRowContext(ctx, updateFoodNutrition, arg.CaloriesPerUnit, arg.ProteinPerUnit, arg.ID)
 	var i Food
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Unit,
 		&i.CaloriesPerUnit,
+		&i.ProteinPerUnit,
 		&i.CreatedAt,
 	)
 	return i, err

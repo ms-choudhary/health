@@ -7,21 +7,24 @@ ORDER BY name;
 SELECT * FROM foods WHERE id = ?;
 
 -- name: CreateFood :one
-INSERT INTO foods (name, unit, calories_per_unit)
-VALUES (?, ?, ?)
+INSERT INTO foods (name, unit, calories_per_unit, protein_per_unit)
+VALUES (?, ?, ?, ?)
 RETURNING *;
 
 -- name: DeleteFood :exec
 DELETE FROM foods WHERE id = ?;
 
--- name: UpdateFoodCalories :one
+-- name: UpdateFoodNutrition :one
 UPDATE foods
-SET calories_per_unit = ?
+SET calories_per_unit = ?,
+    protein_per_unit  = ?
 WHERE id = ?
 RETURNING *;
 
 -- name: RestampLogEntriesForFood :exec
 UPDATE log_entries
 SET calories_per_unit = ?1,
-    calories          = ?1 * quantity
-WHERE food_id = ?2;
+    calories          = ?1 * quantity,
+    protein_per_unit  = ?2,
+    protein           = ?2 * quantity
+WHERE food_id = ?3;

@@ -25,6 +25,7 @@ type createUserBody struct {
 	Name           string `json:"name"`
 	Avatar         string `json:"avatar"`
 	TargetCalories int64  `json:"target_calories"`
+	TargetProtein  int64  `json:"target_protein"`
 }
 
 func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
@@ -42,6 +43,10 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "target_calories must be > 0")
 		return
 	}
+	if body.TargetProtein < 0 {
+		writeError(w, http.StatusBadRequest, "target_protein must be >= 0")
+		return
+	}
 	avatar := strings.TrimSpace(body.Avatar)
 	if avatar == "" {
 		avatar = strings.ToUpper(name)
@@ -53,6 +58,7 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		Name:           name,
 		Avatar:         avatar,
 		TargetCalories: body.TargetCalories,
+		TargetProtein:  body.TargetProtein,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -64,6 +70,7 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 type updateUserBody struct {
 	Name           *string `json:"name"`
 	TargetCalories *int64  `json:"target_calories"`
+	TargetProtein  *int64  `json:"target_protein"`
 }
 
 func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
@@ -88,6 +95,7 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	name := current.Name
 	target := current.TargetCalories
+	targetProtein := current.TargetProtein
 	if body.Name != nil {
 		trimmed := strings.TrimSpace(*body.Name)
 		if trimmed == "" {
@@ -103,10 +111,18 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		}
 		target = *body.TargetCalories
 	}
+	if body.TargetProtein != nil {
+		if *body.TargetProtein < 0 {
+			writeError(w, http.StatusBadRequest, "target_protein must be >= 0")
+			return
+		}
+		targetProtein = *body.TargetProtein
+	}
 	u, err := h.Q.UpdateUser(r.Context(), queries.UpdateUserParams{
 		ID:             id,
 		Name:           name,
 		TargetCalories: target,
+		TargetProtein:  targetProtein,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())

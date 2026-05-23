@@ -81,7 +81,8 @@ SELECT
   ri.quantity,
   f.name              AS food_name,
   f.unit              AS food_unit,
-  f.calories_per_unit AS calories_per_unit
+  f.calories_per_unit AS calories_per_unit,
+  f.protein_per_unit  AS protein_per_unit
 FROM recipe_ingredients ri
 JOIN foods f ON f.id = ri.food_id
 WHERE ri.recipe_id = ?
@@ -96,6 +97,7 @@ type GetRecipeIngredientsRow struct {
 	FoodName        string  `json:"food_name"`
 	FoodUnit        string  `json:"food_unit"`
 	CaloriesPerUnit float64 `json:"calories_per_unit"`
+	ProteinPerUnit  float64 `json:"protein_per_unit"`
 }
 
 func (q *Queries) GetRecipeIngredients(ctx context.Context, recipeID int64) ([]GetRecipeIngredientsRow, error) {
@@ -115,6 +117,7 @@ func (q *Queries) GetRecipeIngredients(ctx context.Context, recipeID int64) ([]G
 			&i.FoodName,
 			&i.FoodUnit,
 			&i.CaloriesPerUnit,
+			&i.ProteinPerUnit,
 		); err != nil {
 			return nil, err
 		}
@@ -134,7 +137,8 @@ SELECT
   r.id,
   r.name,
   r.created_at,
-  CAST(COALESCE(SUM(f.calories_per_unit * ri.quantity), 0) AS REAL) AS total_calories
+  CAST(COALESCE(SUM(f.calories_per_unit * ri.quantity), 0) AS REAL) AS total_calories,
+  CAST(COALESCE(SUM(f.protein_per_unit  * ri.quantity), 0) AS REAL) AS total_protein
 FROM recipes r
 LEFT JOIN recipe_ingredients ri ON ri.recipe_id = r.id
 LEFT JOIN foods f               ON f.id          = ri.food_id
@@ -148,6 +152,7 @@ type ListRecipesRow struct {
 	Name          string  `json:"name"`
 	CreatedAt     string  `json:"created_at"`
 	TotalCalories float64 `json:"total_calories"`
+	TotalProtein  float64 `json:"total_protein"`
 }
 
 func (q *Queries) ListRecipes(ctx context.Context, search *string) ([]ListRecipesRow, error) {
@@ -164,6 +169,7 @@ func (q *Queries) ListRecipes(ctx context.Context, search *string) ([]ListRecipe
 			&i.Name,
 			&i.CreatedAt,
 			&i.TotalCalories,
+			&i.TotalProtein,
 		); err != nil {
 			return nil, err
 		}

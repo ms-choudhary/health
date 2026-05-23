@@ -8,6 +8,7 @@ SELECT
   le.food_name,
   le.food_unit,
   le.calories_per_unit,
+  le.protein_per_unit,
   le.food_id,
   le.quantity AS last_quantity
 FROM log_entries le
@@ -23,9 +24,11 @@ LIMIT 20;
 
 -- name: AddLogEntry :one
 INSERT INTO log_entries
-  (user_id, food_id, date, food_name, food_unit, calories_per_unit, quantity, calories,
+  (user_id, food_id, date, food_name, food_unit,
+   calories_per_unit, protein_per_unit,
+   quantity, calories, protein,
    source_recipe_id, source_recipe_name)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: DeleteLogEntry :exec
@@ -37,10 +40,11 @@ WHERE user_id = ?1
   AND date    = ?2
   AND source_recipe_id = ?3;
 
--- name: SumCaloriesByDateRange :many
+-- name: SumNutritionByDateRange :many
 SELECT
   date,
-  CAST(COALESCE(SUM(calories), 0) AS REAL) AS total_calories
+  CAST(COALESCE(SUM(calories), 0) AS REAL) AS total_calories,
+  CAST(COALESCE(SUM(protein),  0) AS REAL) AS total_protein
 FROM log_entries
 WHERE user_id = sqlc.arg(user_id)
   AND date >= sqlc.arg(from_date)

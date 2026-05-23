@@ -28,7 +28,7 @@ ChartJS.register(
   Filler,
 )
 
-const props = defineProps<{ data: DailyMetric[]; target: number }>()
+const props = defineProps<{ data: DailyMetric[]; target: number; proteinTarget: number }>()
 
 const labels = computed(() => props.data.map((d) => d.date.slice(5)))
 
@@ -58,6 +58,31 @@ const caloriesData = computed<ChartData<'line'>>(() => ({
     {
       label: 'Target',
       data: props.data.map(() => (props.target > 0 ? props.target : null)),
+      borderColor: amber.value,
+      backgroundColor: amber.value,
+      borderDash: [6, 4],
+      tension: 0,
+      pointRadius: 0,
+      fill: false,
+    },
+  ],
+}))
+
+const proteinData = computed<ChartData<'line'>>(() => ({
+  labels: labels.value,
+  datasets: [
+    {
+      label: 'Consumed',
+      data: props.data.map((d) => Math.round(d.protein_consumed)),
+      borderColor: violet.value,
+      backgroundColor: violet.value,
+      tension: 0.35,
+      pointRadius: 3,
+      fill: false,
+    },
+    {
+      label: 'Target',
+      data: props.data.map(() => (props.proteinTarget > 0 ? props.proteinTarget : null)),
       borderColor: amber.value,
       backgroundColor: amber.value,
       borderDash: [6, 4],
@@ -140,6 +165,20 @@ const hasData = computed(() => props.data.length > 0)
       <div class="px-3 pb-3">
         <div class="h-40">
           <Line v-if="hasData" :data="caloriesData" :options="lineOpts" />
+          <div v-else class="h-full grid place-items-center text-muted-foreground text-sm">
+            Not enough data
+          </div>
+        </div>
+      </div>
+    </Card>
+
+    <Card>
+      <div class="p-4 pb-2">
+        <div class="text-sm font-semibold">Protein</div>
+      </div>
+      <div class="px-3 pb-3">
+        <div class="h-40">
+          <Line v-if="hasData" :data="proteinData" :options="lineOpts" />
           <div v-else class="h-full grid place-items-center text-muted-foreground text-sm">
             Not enough data
           </div>

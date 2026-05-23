@@ -152,7 +152,7 @@ onMounted(() => {
             <div class="flex-1 min-w-0">
               <div class="font-medium truncate">{{ f.name }}</div>
               <div class="text-xs text-muted-foreground">
-                {{ f.calories_per_unit }} kcal / 1 {{ f.unit }}
+                {{ f.calories_per_unit }} kcal · {{ f.protein_per_unit }} g protein / 1 {{ f.unit }}
               </div>
             </div>
             <Badge variant="secondary">{{ f.unit }}</Badge>
@@ -188,7 +188,7 @@ onMounted(() => {
             <div class="flex-1 min-w-0">
               <div class="font-medium truncate">{{ r.name }}</div>
               <div class="text-xs text-muted-foreground">
-                {{ Math.round(r.total_calories) }} kcal / serving
+                {{ Math.round(r.total_calories) }} kcal · {{ Math.round(r.total_protein) }} g protein / serving
               </div>
             </div>
             <Badge variant="secondary">Recipe</Badge>

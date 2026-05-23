@@ -10,25 +10,32 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (name, avatar, target_calories)
-VALUES (?, ?, ?)
-RETURNING id, name, avatar, target_calories, created_at
+INSERT INTO users (name, avatar, target_calories, target_protein)
+VALUES (?, ?, ?, ?)
+RETURNING id, name, avatar, target_calories, target_protein, created_at
 `
 
 type CreateUserParams struct {
 	Name           string `json:"name"`
 	Avatar         string `json:"avatar"`
 	TargetCalories int64  `json:"target_calories"`
+	TargetProtein  int64  `json:"target_protein"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, createUser, arg.Name, arg.Avatar, arg.TargetCalories)
+	row := q.db.QueryRowContext(ctx, createUser,
+		arg.Name,
+		arg.Avatar,
+		arg.TargetCalories,
+		arg.TargetProtein,
+	)
 	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Avatar,
 		&i.TargetCalories,
+		&i.TargetProtein,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -44,7 +51,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, name, avatar, target_calories, created_at FROM users WHERE id = ?
+SELECT id, name, avatar, target_calories, target_protein, created_at FROM users WHERE id = ?
 `
 
 func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
@@ -55,13 +62,14 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
 		&i.Name,
 		&i.Avatar,
 		&i.TargetCalories,
+		&i.TargetProtein,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, name, avatar, target_calories, created_at FROM users ORDER BY id
+SELECT id, name, avatar, target_calories, target_protein, created_at FROM users ORDER BY id
 `
 
 func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
@@ -78,6 +86,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.Name,
 			&i.Avatar,
 			&i.TargetCalories,
+			&i.TargetProtein,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -96,25 +105,33 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 const updateUser = `-- name: UpdateUser :one
 UPDATE users
 SET name            = ?,
-    target_calories = ?
+    target_calories = ?,
+    target_protein  = ?
 WHERE id = ?
-RETURNING id, name, avatar, target_calories, created_at
+RETURNING id, name, avatar, target_calories, target_protein, created_at
 `
 
 type UpdateUserParams struct {
 	Name           string `json:"name"`
 	TargetCalories int64  `json:"target_calories"`
+	TargetProtein  int64  `json:"target_protein"`
 	ID             int64  `json:"id"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, updateUser, arg.Name, arg.TargetCalories, arg.ID)
+	row := q.db.QueryRowContext(ctx, updateUser,
+		arg.Name,
+		arg.TargetCalories,
+		arg.TargetProtein,
+		arg.ID,
+	)
 	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Avatar,
 		&i.TargetCalories,
+		&i.TargetProtein,
 		&i.CreatedAt,
 	)
 	return i, err

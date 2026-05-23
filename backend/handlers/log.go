@@ -38,6 +38,7 @@ type addLogBody struct {
 	FoodName        string  `json:"food_name"`
 	FoodUnit        string  `json:"food_unit"`
 	CaloriesPerUnit float64 `json:"calories_per_unit"`
+	ProteinPerUnit  float64 `json:"protein_per_unit"`
 	Quantity        float64 `json:"quantity"`
 	Date            string  `json:"date"`
 }
@@ -71,6 +72,10 @@ func (h *Handler) AddLogEntry(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "calories_per_unit must be >= 0")
 		return
 	}
+	if body.ProteinPerUnit < 0 {
+		writeError(w, http.StatusBadRequest, "protein_per_unit must be >= 0")
+		return
+	}
 	if !validDate(body.Date) {
 		writeError(w, http.StatusBadRequest, "date must be YYYY-MM-DD")
 		return
@@ -82,8 +87,10 @@ func (h *Handler) AddLogEntry(w http.ResponseWriter, r *http.Request) {
 		FoodName:         body.FoodName,
 		FoodUnit:         body.FoodUnit,
 		CaloriesPerUnit:  body.CaloriesPerUnit,
+		ProteinPerUnit:   body.ProteinPerUnit,
 		Quantity:         body.Quantity,
 		Calories:         body.CaloriesPerUnit * body.Quantity,
+		Protein:          body.ProteinPerUnit * body.Quantity,
 		SourceRecipeID:   nil,
 		SourceRecipeName: nil,
 	})

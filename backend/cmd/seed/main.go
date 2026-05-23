@@ -13,9 +13,10 @@ import (
 )
 
 type seedFood struct {
-	name string
-	unit string
-	cpu  float64
+	name    string
+	unit    string
+	cpu     float64
+	protein float64
 }
 
 func main() {
@@ -34,8 +35,8 @@ func main() {
 	q := database.Queries
 
 	users := []queries.CreateUserParams{
-		{Name: "Mohit", Avatar: "MO", TargetCalories: 2200},
-		{Name: "Sara", Avatar: "SR", TargetCalories: 1800},
+		{Name: "Mohit", Avatar: "MO", TargetCalories: 2200, TargetProtein: 140},
+		{Name: "Sara", Avatar: "SR", TargetCalories: 1800, TargetProtein: 100},
 	}
 	createdUsers := make([]queries.User, 0, len(users))
 	for _, u := range users {
@@ -47,21 +48,21 @@ func main() {
 	}
 
 	foods := []seedFood{
-		{"Oatmeal", "g", 3.9},
-		{"Banana", "piece", 89},
-		{"Grilled Chicken", "g", 1.65},
-		{"Brown Rice", "g", 1.3},
-		{"Almonds", "g", 5.8},
-		{"Greek Yogurt", "ml", 0.67},
-		{"Olive Oil", "ml", 8.8},
-		{"Egg", "piece", 78},
-		{"Avocado", "g", 1.6},
-		{"Salmon", "g", 2.08},
+		{"Oatmeal", "g", 3.9, 0.13},
+		{"Banana", "piece", 89, 1.1},
+		{"Grilled Chicken", "g", 1.65, 0.31},
+		{"Brown Rice", "g", 1.3, 0.026},
+		{"Almonds", "g", 5.8, 0.21},
+		{"Greek Yogurt", "ml", 0.67, 0.10},
+		{"Olive Oil", "ml", 8.8, 0.0},
+		{"Egg", "piece", 78, 6.3},
+		{"Avocado", "g", 1.6, 0.02},
+		{"Salmon", "g", 2.08, 0.20},
 	}
 	createdFoods := make([]queries.Food, 0, len(foods))
 	for _, f := range foods {
 		row, err := q.CreateFood(ctx, queries.CreateFoodParams{
-			Name: f.name, Unit: f.unit, CaloriesPerUnit: f.cpu,
+			Name: f.name, Unit: f.unit, CaloriesPerUnit: f.cpu, ProteinPerUnit: f.protein,
 		})
 		if err != nil {
 			log.Fatal(err)
@@ -94,8 +95,10 @@ func main() {
 					UserID: u.ID, FoodID: &f.ID, Date: date,
 					FoodName: f.Name, FoodUnit: f.Unit,
 					CaloriesPerUnit: f.CaloriesPerUnit,
+					ProteinPerUnit:  f.ProteinPerUnit,
 					Quantity:        qty,
 					Calories:        f.CaloriesPerUnit * qty,
+					Protein:         f.ProteinPerUnit * qty,
 				}); err != nil {
 					log.Fatal(err)
 				}

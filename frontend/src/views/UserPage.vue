@@ -22,6 +22,7 @@ type LogGroup =
       recipeName: string
       entries: LogEntry[]
       totalCalories: number
+      totalProtein: number
     }
 import { formatNumber } from '@/lib/utils'
 import Card from '@/components/ui/Card.vue'
@@ -46,8 +47,10 @@ const loadingLog = ref(false)
 const weight = ref<string>('')
 const steps = ref<string>('')
 const targetCalories = ref<string>('')
+const targetProtein = ref<string>('')
 let savingMetrics = false
 let savingTarget = false
+let savingTargetProtein = false
 
 const period = ref<Period>('w')
 const metricsRange = ref<DailyMetric[]>([])
@@ -59,6 +62,9 @@ const isToday = computed(() => dateFnsIsToday(parseISO(date.value)))
 const displayDate = computed(() => format(parseISO(date.value), 'd MMM yyyy'))
 const totalCalories = computed(() =>
   Math.round(entries.value.reduce((s, e) => s + e.calories, 0)),
+)
+const totalProtein = computed(() =>
+  Math.round(entries.value.reduce((s, e) => s + e.protein, 0)),
 )
 const user = computed(() => userStore.findById(props.userId))
 
@@ -92,6 +98,7 @@ const groups = computed<LogGroup[]>(() => {
       recipeName: arr[0].source_recipe_name ?? 'Recipe',
       entries: arr,
       totalCalories: arr.reduce((s, e) => s + e.calories, 0),
+      totalProtein: arr.reduce((s, e) => s + e.protein, 0),
     })
   }
   return out
@@ -121,6 +128,7 @@ async function loadLog() {
 function syncTargetFromUser(): void {
   const u = user.value
   targetCalories.value = u ? String(u.target_calories) : ''
+  targetProtein.value = u ? String(u.target_protein) : ''
 }
 
 function dateRangeForPeriod(): { from: string; to: string } {
@@ -184,6 +192,25 @@ async function saveTargetCalories() {
     targetCalories.value = String(updated.target_calories)
   } finally {
     savingTarget = false
+  }
+}
+
+async function saveTargetProtein() {
+  if (savingTargetProtein) return
+  const t = parseOptionalNumber(targetProtein.value)
+  if (t == null || t < 0) {
+    syncTargetFromUser()
+    return
+  }
+  const rounded = Math.round(t)
+  if (user.value && user.value.target_protein === rounded) return
+  savingTargetProtein = true
+  try {
+    const updated = await api.updateUser(props.userId, { target_protein: rounded })
+    userStore.upsert(updated)
+    targetProtein.value = String(updated.target_protein)
+  } finally {
+    savingTargetProtein = false
   }
 }
 
@@ -252,6 +279,7 @@ onMounted(async () => {
               <th class="text-left font-medium px-3 py-2">Food</th>
               <th class="text-right font-medium px-3 py-2 w-16">Qty</th>
               <th class="text-right font-medium px-3 py-2 w-16">Cal</th>
+              <th class="text-right font-medium px-3 py-2 w-16">Prot</th>
               <th class="w-9" />
             </tr>
           </thead>
@@ -269,6 +297,7 @@ onMounted(async () => {
                   {{ formatNumber(g.entry.quantity, g.entry.quantity % 1 ? 1 : 0) }}
                 </td>
                 <td class="text-right px-3 py-2">{{ Math.round(g.entry.calories) }}</td>
+                <td class="text-right px-3 py-2">{{ Math.round(g.entry.protein) }}</td>
                 <td class="px-1">
                   <Button variant="ghost" size="icon" @click="removeEntry(g.entry.id)">
                     <Trash2 class="h-4 w-4" />
@@ -292,6 +321,9 @@ onMounted(async () => {
                   <td class="text-right px-3 py-2 font-medium">
                     {{ Math.round(g.totalCalories) }}
                   </td>
+                  <td class="text-right px-3 py-2 font-medium">
+                    {{ Math.round(g.totalProtein) }}
+                  </td>
                   <td class="px-1">
                     <Button variant="ghost" size="icon" @click="removeRecipeGroup(g.recipeId)">
                       <Trash2 class="h-4 w-4" />
@@ -313,6 +345,9 @@ onMounted(async () => {
                   <td class="text-right px-3 py-2 text-muted-foreground">
                     {{ Math.round(e.calories) }}
                   </td>
+                  <td class="text-right px-3 py-2 text-muted-foreground">
+                    {{ Math.round(e.protein) }}
+                  </td>
                   <td class="px-1" />
                 </tr>
               </template>
@@ -321,7 +356,10 @@ onMounted(async () => {
         </table>
         <div class="px-3 py-3 border-t border-border flex justify-between font-semibold">
           <span>Total</span>
-          <span class="text-[hsl(var(--chart-blue))]">{{ formatNumber(totalCalories) }} kcal</span>
+          <span>
+            <span class="text-[hsl(var(--chart-blue))]">{{ formatNumber(totalCalories) }} kcal</span>
+            <span class="ml-3 text-[hsl(var(--chart-violet))]">{{ formatNumber(totalProtein) }} g</span>
+          </span>
         </div>
       </Card>
 
@@ -371,6 +409,19 @@ onMounted(async () => {
             />
             <span class="text-xs text-muted-foreground w-10">kcal</span>
           </div>
+          <div class="flex items-center gap-3">
+            <label class="w-32 text-sm text-muted-foreground">Target protein</label>
+            <Input
+              v-model="targetProtein"
+              type="number"
+              inputmode="numeric"
+              min="0"
+              step="5"
+              placeholder="0"
+              @blur="saveTargetProtein"
+            />
+            <span class="text-xs text-muted-foreground w-10">g</span>
+          </div>
         </div>
       </Card>
     </section>
@@ -395,7 +446,12 @@ onMounted(async () => {
       <div v-if="loadingCharts" class="space-y-3">
         <div v-for="i in 3" :key="i" class="h-48 rounded-lg bg-muted animate-pulse" />
       </div>
-      <ProgressCharts v-else :data="metricsRange" :target="user?.target_calories ?? 0" />
+      <ProgressCharts
+        v-else
+        :data="metricsRange"
+        :target="user?.target_calories ?? 0"
+        :protein-target="user?.target_protein ?? 0"
+      />
     </section>
   </div>
 

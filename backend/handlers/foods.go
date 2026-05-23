@@ -26,6 +26,7 @@ type createFoodBody struct {
 	Name            string  `json:"name"`
 	Unit            string  `json:"unit"`
 	CaloriesPerUnit float64 `json:"calories_per_unit"`
+	ProteinPerUnit  float64 `json:"protein_per_unit"`
 }
 
 func (h *Handler) CreateFood(w http.ResponseWriter, r *http.Request) {
@@ -47,10 +48,15 @@ func (h *Handler) CreateFood(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "calories_per_unit must be >= 0")
 		return
 	}
+	if body.ProteinPerUnit < 0 {
+		writeError(w, http.StatusBadRequest, "protein_per_unit must be >= 0")
+		return
+	}
 	food, err := h.Q.CreateFood(r.Context(), queries.CreateFoodParams{
 		Name:            name,
 		Unit:            unit,
 		CaloriesPerUnit: body.CaloriesPerUnit,
+		ProteinPerUnit:  body.ProteinPerUnit,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -61,6 +67,7 @@ func (h *Handler) CreateFood(w http.ResponseWriter, r *http.Request) {
 
 type updateFoodBody struct {
 	CaloriesPerUnit float64 `json:"calories_per_unit"`
+	ProteinPerUnit  float64 `json:"protein_per_unit"`
 }
 
 func (h *Handler) UpdateFood(w http.ResponseWriter, r *http.Request) {
@@ -86,6 +93,10 @@ func (h *Handler) UpdateFood(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "calories_per_unit must be >= 0")
 		return
 	}
+	if body.ProteinPerUnit < 0 {
+		writeError(w, http.StatusBadRequest, "protein_per_unit must be >= 0")
+		return
+	}
 
 	tx, err := h.DB.BeginTx(r.Context(), nil)
 	if err != nil {
@@ -95,9 +106,10 @@ func (h *Handler) UpdateFood(w http.ResponseWriter, r *http.Request) {
 	defer func() { _ = tx.Rollback() }()
 	q := h.Q.WithTx(tx)
 
-	food, err := q.UpdateFoodCalories(r.Context(), queries.UpdateFoodCaloriesParams{
+	food, err := q.UpdateFoodNutrition(r.Context(), queries.UpdateFoodNutritionParams{
 		ID:              id,
 		CaloriesPerUnit: body.CaloriesPerUnit,
+		ProteinPerUnit:  body.ProteinPerUnit,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -106,6 +118,7 @@ func (h *Handler) UpdateFood(w http.ResponseWriter, r *http.Request) {
 	foodID := id
 	if err := q.RestampLogEntriesForFood(r.Context(), queries.RestampLogEntriesForFoodParams{
 		CaloriesPerUnit: body.CaloriesPerUnit,
+		ProteinPerUnit:  body.ProteinPerUnit,
 		FoodID:          &foodID,
 	}); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())

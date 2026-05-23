@@ -33,7 +33,7 @@ func (h *Handler) CalorieHint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	prompt := fmt.Sprintf("ANSWER IN ONE LINE: how much calorie in %s ?", req.Name)
+	prompt := fmt.Sprintf("ANSWER IN ONE LINE: how much calories and protein (g) in %s ?", req.Name)
 
 	body, _ := json.Marshal(map[string]any{
 		"contents": []map[string]any{

@@ -17,6 +17,7 @@ interface DraftIngredient {
   food_name: string
   food_unit: string
   calories_per_unit: number
+  protein_per_unit: number
   quantity: string
 }
 
@@ -48,6 +49,17 @@ const totalCalories = computed<number>(() => {
   return total
 })
 
+const totalProtein = computed<number>(() => {
+  let total = 0
+  for (const ing of ingredients.value) {
+    const qty = Number(ing.quantity)
+    if (Number.isFinite(qty) && qty > 0) {
+      total += qty * ing.protein_per_unit
+    }
+  }
+  return total
+})
+
 function close(): void {
   emit('update:open', false)
 }
@@ -70,6 +82,7 @@ async function loadForEdit(id: number): Promise<void> {
       food_name: ing.food_name,
       food_unit: ing.food_unit,
       calories_per_unit: ing.calories_per_unit,
+      protein_per_unit: ing.protein_per_unit,
       quantity: String(ing.quantity),
     }))
   } catch (e) {
@@ -109,6 +122,7 @@ function addIngredient(food: Food): void {
     food_name: food.name,
     food_unit: food.unit,
     calories_per_unit: food.calories_per_unit,
+    protein_per_unit: food.protein_per_unit,
     quantity: '1',
   })
   search.value = ''
@@ -189,7 +203,7 @@ onMounted(() => {
           <div class="flex-1 min-w-0">
             <div class="text-sm font-medium truncate">{{ ing.food_name }}</div>
             <div class="text-xs text-muted-foreground">
-              {{ ing.calories_per_unit }} kcal / 1 {{ ing.food_unit }}
+              {{ ing.calories_per_unit }} kcal · {{ ing.protein_per_unit }} g protein / 1 {{ ing.food_unit }}
             </div>
           </div>
           <Input
@@ -225,7 +239,7 @@ onMounted(() => {
             <div class="min-w-0">
               <div class="text-sm font-medium truncate">{{ food.name }}</div>
               <div class="text-xs text-muted-foreground">
-                {{ food.calories_per_unit }} kcal / 1 {{ food.unit }}
+                {{ food.calories_per_unit }} kcal · {{ food.protein_per_unit }} g protein / 1 {{ food.unit }}
               </div>
             </div>
             <Badge variant="outline">
@@ -236,8 +250,10 @@ onMounted(() => {
       </div>
 
       <div class="rounded-md bg-muted px-3 py-2 flex items-center justify-between">
-        <span class="text-xs text-muted-foreground uppercase tracking-wide">Total per serving</span>
-        <span class="font-semibold">{{ Math.round(totalCalories) }} kcal</span>
+        <span class="text-xs text-muted-foreground uppercase tracking-wide">Per serving</span>
+        <span class="font-semibold">
+          {{ Math.round(totalCalories) }} kcal · {{ Math.round(totalProtein) }} g protein
+        </span>
       </div>
 
       <p v-if="errMsg" class="text-sm text-destructive">{{ errMsg }}</p>

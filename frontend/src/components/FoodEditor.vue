@@ -19,6 +19,7 @@ const isEdit = computed<boolean>(() => props.food != null)
 const name = ref<string>('')
 const unit = ref<string>('g')
 const calories = ref<string>('')
+const protein = ref<string>('')
 const saving = ref<boolean>(false)
 const errMsg = ref<string>('')
 const aiHint = ref<string>('')
@@ -29,6 +30,7 @@ function reset(): void {
   name.value = props.food?.name ?? ''
   unit.value = props.food?.unit ?? 'g'
   calories.value = props.food != null ? String(props.food.calories_per_unit) : ''
+  protein.value = props.food != null ? String(props.food.protein_per_unit) : ''
   errMsg.value = ''
   aiHint.value = ''
   aiError.value = ''
@@ -60,8 +62,13 @@ async function fetchCalorieHint(): Promise<void> {
 
 async function save(): Promise<void> {
   const cal = Number(calories.value)
+  const prot = Number(protein.value)
   if (!Number.isFinite(cal) || cal < 0) {
     errMsg.value = 'Enter a non-negative calorie value'
+    return
+  }
+  if (!Number.isFinite(prot) || prot < 0) {
+    errMsg.value = 'Enter a non-negative protein value'
     return
   }
   if (!isEdit.value && !name.value.trim()) {
@@ -72,12 +79,16 @@ async function save(): Promise<void> {
   errMsg.value = ''
   try {
     if (props.food != null) {
-      await api.updateFood(props.food.id, { calories_per_unit: cal })
+      await api.updateFood(props.food.id, {
+        calories_per_unit: cal,
+        protein_per_unit: prot,
+      })
     } else {
       await api.createFood({
         name: name.value.trim(),
         unit: unit.value,
         calories_per_unit: cal,
+        protein_per_unit: prot,
       })
     }
     emit('saved')
@@ -148,8 +159,19 @@ async function save(): Promise<void> {
         </template>
       </div>
       <p class="text-xs text-muted-foreground">Calories per 1 {{ unit }}</p>
+
+      <Input
+        v-model="protein"
+        type="number"
+        inputmode="decimal"
+        placeholder="Protein"
+        min="0"
+        step="0.1"
+      />
+      <p class="text-xs text-muted-foreground">Protein (g) per 1 {{ unit }}</p>
+
       <p v-if="isEdit" class="text-xs text-muted-foreground">
-        Changing this updates all past log entries for {{ name }}.
+        Changing these updates all past log entries for {{ name }}.
       </p>
       <p v-if="errMsg" class="text-sm text-destructive">{{ errMsg }}</p>
 

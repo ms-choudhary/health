@@ -19,6 +19,7 @@ interface PickedFood {
   food_name: string
   food_unit: string
   calories_per_unit: number
+  protein_per_unit: number
   quantity: string
 }
 
@@ -27,6 +28,7 @@ interface PickedRecipe {
   recipe_id: number
   recipe_name: string
   total_calories: number
+  total_protein: number
   scale: string
 }
 
@@ -53,6 +55,14 @@ const previewCalories = computed<number>(() => {
   if (!Number.isFinite(n) || n <= 0) return 0
   if (picked.value.kind === 'food') return n * picked.value.calories_per_unit
   return n * picked.value.total_calories
+})
+
+const previewProtein = computed<number>(() => {
+  if (!picked.value) return 0
+  const n = Number(picked.value.kind === 'food' ? picked.value.quantity : picked.value.scale)
+  if (!Number.isFinite(n) || n <= 0) return 0
+  if (picked.value.kind === 'food') return n * picked.value.protein_per_unit
+  return n * picked.value.total_protein
 })
 
 async function loadRecent(): Promise<void> {
@@ -90,6 +100,7 @@ function pickRecent(item: RecentFood): void {
     food_name: item.food_name,
     food_unit: item.food_unit,
     calories_per_unit: item.calories_per_unit,
+    protein_per_unit: item.protein_per_unit,
     quantity: String(item.last_quantity),
   }
 }
@@ -101,6 +112,7 @@ function pickLibraryFood(food: Food): void {
     food_name: food.name,
     food_unit: food.unit,
     calories_per_unit: food.calories_per_unit,
+    protein_per_unit: food.protein_per_unit,
     quantity: '1',
   }
 }
@@ -111,6 +123,7 @@ function pickLibraryRecipe(recipe: RecipeListItem): void {
     recipe_id: recipe.id,
     recipe_name: recipe.name,
     total_calories: recipe.total_calories,
+    total_protein: recipe.total_protein,
     scale: '1',
   }
 }
@@ -135,6 +148,7 @@ async function confirm(): Promise<void> {
       food_name: picked.value.food_name,
       food_unit: picked.value.food_unit,
       calories_per_unit: picked.value.calories_per_unit,
+      protein_per_unit: picked.value.protein_per_unit,
       quantity: n,
       date: props.date,
     }
@@ -214,7 +228,7 @@ onUnmounted(() => {
             <div>
               <div class="font-medium">{{ picked.food_name }}</div>
               <div class="text-xs text-muted-foreground">
-                {{ picked.calories_per_unit }} kcal / 1 {{ picked.food_unit }}
+                {{ picked.calories_per_unit }} kcal · {{ picked.protein_per_unit }} g protein / 1 {{ picked.food_unit }}
               </div>
             </div>
             <div class="flex items-center gap-2">
@@ -229,7 +243,7 @@ onUnmounted(() => {
               />
               <span class="text-sm text-muted-foreground">{{ picked.food_unit }}</span>
               <span v-if="previewCalories > 0" class="text-sm ml-auto">
-                ≈ {{ Math.round(previewCalories) }} kcal
+                ≈ {{ Math.round(previewCalories) }} kcal · {{ Math.round(previewProtein) }} g
               </span>
             </div>
           </template>
@@ -240,7 +254,7 @@ onUnmounted(() => {
                 <Badge variant="secondary">Recipe</Badge>
               </div>
               <div class="text-xs text-muted-foreground">
-                {{ Math.round(picked.total_calories) }} kcal / serving
+                {{ Math.round(picked.total_calories) }} kcal · {{ Math.round(picked.total_protein) }} g protein / serving
               </div>
             </div>
             <div class="flex items-center gap-2">
@@ -255,7 +269,7 @@ onUnmounted(() => {
               />
               <span class="text-sm text-muted-foreground">serving(s)</span>
               <span v-if="previewCalories > 0" class="text-sm ml-auto">
-                ≈ {{ Math.round(previewCalories) }} kcal
+                ≈ {{ Math.round(previewCalories) }} kcal · {{ Math.round(previewProtein) }} g
               </span>
             </div>
           </template>
@@ -322,7 +336,7 @@ onUnmounted(() => {
                 <div class="min-w-0">
                   <div class="font-medium truncate">{{ item.recipe.name }}</div>
                   <div class="text-xs text-muted-foreground">
-                    {{ Math.round(item.recipe.total_calories) }} kcal / serving
+                    {{ Math.round(item.recipe.total_calories) }} kcal · {{ Math.round(item.recipe.total_protein) }} g protein / serving
                   </div>
                 </div>
                 <Badge variant="secondary">Recipe</Badge>
@@ -337,7 +351,7 @@ onUnmounted(() => {
                 <div class="min-w-0">
                   <div class="font-medium truncate">{{ item.food.name }}</div>
                   <div class="text-xs text-muted-foreground">
-                    {{ item.food.calories_per_unit }} kcal / 1 {{ item.food.unit }}
+                    {{ item.food.calories_per_unit }} kcal · {{ item.food.protein_per_unit }} g protein / 1 {{ item.food.unit }}
                   </div>
                 </div>
                 <Badge variant="outline">{{ item.food.unit }}</Badge>
