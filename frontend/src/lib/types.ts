@@ -30,6 +30,7 @@ export interface LogEntry {
   protein: number
   source_recipe_id: number | null
   source_recipe_name: string | null
+  source_recipe_servings: number | null
 }
 
 export interface RecentFood {
@@ -136,7 +137,7 @@ export interface RecipePayload {
 
 export interface LogRecipePayload {
   recipe_id: number
-  scale: number
+  servings: number
   date: string
 }
 

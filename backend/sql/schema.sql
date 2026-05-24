@@ -29,7 +29,8 @@ CREATE TABLE IF NOT EXISTS log_entries (
   calories            REAL NOT NULL,
   protein             REAL NOT NULL DEFAULT 0,
   source_recipe_id    INTEGER,
-  source_recipe_name  TEXT
+  source_recipe_name  TEXT,
+  source_recipe_servings REAL
 );
 
 CREATE TABLE IF NOT EXISTS recipes (

@@ -216,7 +216,7 @@ func (h *Handler) DeleteRecipe(w http.ResponseWriter, r *http.Request) {
 
 type logRecipeBody struct {
 	RecipeID int64   `json:"recipe_id"`
-	Scale    float64 `json:"scale"`
+	Servings float64 `json:"servings"`
 	Date     string  `json:"date"`
 }
 
@@ -235,8 +235,8 @@ func (h *Handler) LogRecipe(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "recipe_id required")
 		return
 	}
-	if body.Scale <= 0 {
-		writeError(w, http.StatusBadRequest, "scale must be > 0")
+	if body.Servings <= 0 {
+		writeError(w, http.StatusBadRequest, "servings must be > 0")
 		return
 	}
 	if !validDate(body.Date) {
@@ -275,20 +275,21 @@ func (h *Handler) LogRecipe(w http.ResponseWriter, r *http.Request) {
 		foodID := ing.FoodID
 		recipeID := recipe.ID
 		recipeName := recipe.Name
-		qty := ing.Quantity * body.Scale
+		qty := ing.Quantity * body.Servings
 		entry, err := q.AddLogEntry(r.Context(), queries.AddLogEntryParams{
-			UserID:           userID,
-			FoodID:           &foodID,
-			Date:             body.Date,
-			FoodName:         ing.FoodName,
-			FoodUnit:         ing.FoodUnit,
-			CaloriesPerUnit:  ing.CaloriesPerUnit,
-			ProteinPerUnit:   ing.ProteinPerUnit,
-			Quantity:         qty,
-			Calories:         ing.CaloriesPerUnit * qty,
-			Protein:          ing.ProteinPerUnit * qty,
-			SourceRecipeID:   &recipeID,
-			SourceRecipeName: &recipeName,
+			UserID:               userID,
+			FoodID:               &foodID,
+			Date:                 body.Date,
+			FoodName:             ing.FoodName,
+			FoodUnit:             ing.FoodUnit,
+			CaloriesPerUnit:      ing.CaloriesPerUnit,
+			ProteinPerUnit:       ing.ProteinPerUnit,
+			Quantity:             qty,
+			Calories:             ing.CaloriesPerUnit * qty,
+			Protein:              ing.ProteinPerUnit * qty,
+			SourceRecipeID:       &recipeID,
+			SourceRecipeName:     &recipeName,
+			SourceRecipeServings: &body.Servings,
 		})
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())

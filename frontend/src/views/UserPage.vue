@@ -20,6 +20,7 @@ type LogGroup =
       kind: 'recipe'
       recipeId: number
       recipeName: string
+      servings: number | null
       entries: LogEntry[]
       totalCalories: number
       totalProtein: number
@@ -96,6 +97,7 @@ const groups = computed<LogGroup[]>(() => {
       kind: 'recipe',
       recipeId: item.recipeId,
       recipeName: arr[0].source_recipe_name ?? 'Recipe',
+      servings: arr[0].source_recipe_servings,
       entries: arr,
       totalCalories: arr.reduce((s, e) => s + e.calories, 0),
       totalProtein: arr.reduce((s, e) => s + e.protein, 0),
@@ -314,7 +316,13 @@ onMounted(async () => {
                       </span>
                     </div>
                     <div class="text-xs text-muted-foreground">
-                      {{ g.entries.length }} ingredient{{ g.entries.length === 1 ? '' : 's' }}
+                      <template v-if="g.servings != null">
+                        {{ formatNumber(g.servings, g.servings % 1 ? 1 : 0) }}
+                        serving{{ g.servings === 1 ? '' : 's' }}
+                      </template>
+                      <template v-else>
+                        {{ g.entries.length }} ingredient{{ g.entries.length === 1 ? '' : 's' }}
+                      </template>
                     </div>
                   </td>
                   <td class="text-right px-3 py-2 text-muted-foreground">—</td>

@@ -163,8 +163,8 @@ async function confirm(): Promise<void> {
     }
     return
   }
-  const scale = Number(picked.value.scale)
-  if (!Number.isFinite(scale) || scale <= 0) {
+  const servings = Number(picked.value.scale)
+  if (!Number.isFinite(servings) || servings <= 0) {
     errMsg.value = 'Servings must be a positive number'
     return
   }
@@ -174,7 +174,7 @@ async function confirm(): Promise<void> {
   try {
     await api.logRecipe(props.userId, {
       recipe_id: recipeId,
-      scale,
+      servings,
       date: props.date,
     })
     emit('added', { recipe_id: recipeId })

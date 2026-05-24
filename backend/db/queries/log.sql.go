@@ -14,24 +14,25 @@ INSERT INTO log_entries
   (user_id, food_id, date, food_name, food_unit,
    calories_per_unit, protein_per_unit,
    quantity, calories, protein,
-   source_recipe_id, source_recipe_name)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, user_id, food_id, date, food_name, food_unit, calories_per_unit, protein_per_unit, quantity, calories, protein, source_recipe_id, source_recipe_name
+   source_recipe_id, source_recipe_name, source_recipe_servings)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id, user_id, food_id, date, food_name, food_unit, calories_per_unit, protein_per_unit, quantity, calories, protein, source_recipe_id, source_recipe_name, source_recipe_servings
 `
 
 type AddLogEntryParams struct {
-	UserID           int64   `json:"user_id"`
-	FoodID           *int64  `json:"food_id"`
-	Date             string  `json:"date"`
-	FoodName         string  `json:"food_name"`
-	FoodUnit         string  `json:"food_unit"`
-	CaloriesPerUnit  float64 `json:"calories_per_unit"`
-	ProteinPerUnit   float64 `json:"protein_per_unit"`
-	Quantity         float64 `json:"quantity"`
-	Calories         float64 `json:"calories"`
-	Protein          float64 `json:"protein"`
-	SourceRecipeID   *int64  `json:"source_recipe_id"`
-	SourceRecipeName *string `json:"source_recipe_name"`
+	UserID               int64    `json:"user_id"`
+	FoodID               *int64   `json:"food_id"`
+	Date                 string   `json:"date"`
+	FoodName             string   `json:"food_name"`
+	FoodUnit             string   `json:"food_unit"`
+	CaloriesPerUnit      float64  `json:"calories_per_unit"`
+	ProteinPerUnit       float64  `json:"protein_per_unit"`
+	Quantity             float64  `json:"quantity"`
+	Calories             float64  `json:"calories"`
+	Protein              float64  `json:"protein"`
+	SourceRecipeID       *int64   `json:"source_recipe_id"`
+	SourceRecipeName     *string  `json:"source_recipe_name"`
+	SourceRecipeServings *float64 `json:"source_recipe_servings"`
 }
 
 func (q *Queries) AddLogEntry(ctx context.Context, arg AddLogEntryParams) (LogEntry, error) {
@@ -48,6 +49,7 @@ func (q *Queries) AddLogEntry(ctx context.Context, arg AddLogEntryParams) (LogEn
 		arg.Protein,
 		arg.SourceRecipeID,
 		arg.SourceRecipeName,
+		arg.SourceRecipeServings,
 	)
 	var i LogEntry
 	err := row.Scan(
@@ -64,6 +66,7 @@ func (q *Queries) AddLogEntry(ctx context.Context, arg AddLogEntryParams) (LogEn
 		&i.Protein,
 		&i.SourceRecipeID,
 		&i.SourceRecipeName,
+		&i.SourceRecipeServings,
 	)
 	return i, err
 }
@@ -101,7 +104,7 @@ func (q *Queries) DeleteLogEntry(ctx context.Context, arg DeleteLogEntryParams) 
 }
 
 const getLogForDate = `-- name: GetLogForDate :many
-SELECT id, user_id, food_id, date, food_name, food_unit, calories_per_unit, protein_per_unit, quantity, calories, protein, source_recipe_id, source_recipe_name FROM log_entries
+SELECT id, user_id, food_id, date, food_name, food_unit, calories_per_unit, protein_per_unit, quantity, calories, protein, source_recipe_id, source_recipe_name, source_recipe_servings FROM log_entries
 WHERE user_id = ? AND date = ?
 ORDER BY id
 `
@@ -134,6 +137,7 @@ func (q *Queries) GetLogForDate(ctx context.Context, arg GetLogForDateParams) ([
 			&i.Protein,
 			&i.SourceRecipeID,
 			&i.SourceRecipeName,
+			&i.SourceRecipeServings,
 		); err != nil {
 			return nil, err
 		}

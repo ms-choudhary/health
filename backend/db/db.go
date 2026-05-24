@@ -33,6 +33,9 @@ func Init(path string) (*DB, error) {
 	if err := ensureColumn(conn, "log_entries", "source_recipe_name", "TEXT"); err != nil {
 		return nil, fmt.Errorf("migrate log_entries.source_recipe_name: %w", err)
 	}
+	if err := ensureColumn(conn, "log_entries", "source_recipe_servings", "REAL"); err != nil {
+		return nil, fmt.Errorf("migrate log_entries.source_recipe_servings: %w", err)
+	}
 	if err := ensureColumn(conn, "users", "target_calories", "INTEGER NOT NULL DEFAULT 2000"); err != nil {
 		return nil, fmt.Errorf("migrate users.target_calories: %w", err)
 	}

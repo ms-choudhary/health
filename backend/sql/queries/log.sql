@@ -27,8 +27,8 @@ INSERT INTO log_entries
   (user_id, food_id, date, food_name, food_unit,
    calories_per_unit, protein_per_unit,
    quantity, calories, protein,
-   source_recipe_id, source_recipe_name)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+   source_recipe_id, source_recipe_name, source_recipe_servings)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: DeleteLogEntry :exec
