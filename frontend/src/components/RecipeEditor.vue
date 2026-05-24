@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { api } from '@/lib/api'
+import { formatNumber } from '@/lib/utils'
 import type {
   Food,
   RecipeWithIngredients,
@@ -252,7 +253,7 @@ onMounted(() => {
       <div class="rounded-md bg-muted px-3 py-2 flex items-center justify-between">
         <span class="text-xs text-muted-foreground uppercase tracking-wide">Per serving</span>
         <span class="font-semibold">
-          {{ Math.round(totalCalories) }} kcal · {{ Math.round(totalProtein) }} g protein
+          {{ Math.round(totalCalories) }} kcal · {{ formatNumber(totalProtein, 1) }} g protein
         </span>
       </div>
 

@@ -64,7 +64,7 @@ const totalCalories = computed(() =>
   Math.round(entries.value.reduce((s, e) => s + e.calories, 0)),
 )
 const totalProtein = computed(() =>
-  Math.round(entries.value.reduce((s, e) => s + e.protein, 0)),
+  entries.value.reduce((s, e) => s + e.protein, 0),
 )
 const user = computed(() => userStore.findById(props.userId))
 
@@ -297,7 +297,7 @@ onMounted(async () => {
                   {{ formatNumber(g.entry.quantity, g.entry.quantity % 1 ? 1 : 0) }}
                 </td>
                 <td class="text-right px-3 py-2">{{ Math.round(g.entry.calories) }}</td>
-                <td class="text-right px-3 py-2">{{ Math.round(g.entry.protein) }}</td>
+                <td class="text-right px-3 py-2">{{ formatNumber(g.entry.protein, 1) }}</td>
                 <td class="px-1">
                   <Button variant="ghost" size="icon" @click="removeEntry(g.entry.id)">
                     <Trash2 class="h-4 w-4" />
@@ -322,7 +322,7 @@ onMounted(async () => {
                     {{ Math.round(g.totalCalories) }}
                   </td>
                   <td class="text-right px-3 py-2 font-medium">
-                    {{ Math.round(g.totalProtein) }}
+                    {{ formatNumber(g.totalProtein, 1) }}
                   </td>
                   <td class="px-1">
                     <Button variant="ghost" size="icon" @click="removeRecipeGroup(g.recipeId)">
@@ -346,7 +346,7 @@ onMounted(async () => {
                     {{ Math.round(e.calories) }}
                   </td>
                   <td class="text-right px-3 py-2 text-muted-foreground">
-                    {{ Math.round(e.protein) }}
+                    {{ formatNumber(e.protein, 1) }}
                   </td>
                   <td class="px-1" />
                 </tr>
@@ -358,7 +358,7 @@ onMounted(async () => {
           <span>Total</span>
           <span>
             <span class="text-[hsl(var(--chart-blue))]">{{ formatNumber(totalCalories) }} kcal</span>
-            <span class="ml-3 text-[hsl(var(--chart-violet))]">{{ formatNumber(totalProtein) }} g</span>
+            <span class="ml-3 text-[hsl(var(--chart-violet))]">{{ formatNumber(totalProtein, 1) }} g</span>
           </span>
         </div>
       </Card>

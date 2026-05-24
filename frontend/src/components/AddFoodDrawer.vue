@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { api } from '@/lib/api'
+import { formatNumber } from '@/lib/utils'
 import type {
   Food,
   RecentFood,
@@ -243,7 +244,7 @@ onUnmounted(() => {
               />
               <span class="text-sm text-muted-foreground">{{ picked.food_unit }}</span>
               <span v-if="previewCalories > 0" class="text-sm ml-auto">
-                ≈ {{ Math.round(previewCalories) }} kcal · {{ Math.round(previewProtein) }} g
+                ≈ {{ Math.round(previewCalories) }} kcal · {{ formatNumber(previewProtein, 1) }} g
               </span>
             </div>
           </template>
@@ -254,7 +255,7 @@ onUnmounted(() => {
                 <Badge variant="secondary">Recipe</Badge>
               </div>
               <div class="text-xs text-muted-foreground">
-                {{ Math.round(picked.total_calories) }} kcal · {{ Math.round(picked.total_protein) }} g protein / serving
+                {{ Math.round(picked.total_calories) }} kcal · {{ formatNumber(picked.total_protein, 1) }} g protein / serving
               </div>
             </div>
             <div class="flex items-center gap-2">
@@ -269,7 +270,7 @@ onUnmounted(() => {
               />
               <span class="text-sm text-muted-foreground">serving(s)</span>
               <span v-if="previewCalories > 0" class="text-sm ml-auto">
-                ≈ {{ Math.round(previewCalories) }} kcal · {{ Math.round(previewProtein) }} g
+                ≈ {{ Math.round(previewCalories) }} kcal · {{ formatNumber(previewProtein, 1) }} g
               </span>
             </div>
           </template>
@@ -336,7 +337,7 @@ onUnmounted(() => {
                 <div class="min-w-0">
                   <div class="font-medium truncate">{{ item.recipe.name }}</div>
                   <div class="text-xs text-muted-foreground">
-                    {{ Math.round(item.recipe.total_calories) }} kcal · {{ Math.round(item.recipe.total_protein) }} g protein / serving
+                    {{ Math.round(item.recipe.total_calories) }} kcal · {{ formatNumber(item.recipe.total_protein, 1) }} g protein / serving
                   </div>
                 </div>
                 <Badge variant="secondary">Recipe</Badge>

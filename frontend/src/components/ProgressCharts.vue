@@ -73,7 +73,7 @@ const proteinData = computed<ChartData<'line'>>(() => ({
   datasets: [
     {
       label: 'Consumed',
-      data: props.data.map((d) => Math.round(d.protein_consumed)),
+      data: props.data.map((d) => Math.round(d.protein_consumed * 10) / 10),
       borderColor: violet.value,
       backgroundColor: violet.value,
       tension: 0.35,
