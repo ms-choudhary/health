@@ -1,12 +1,18 @@
 package handlers
 
 import (
+	"database/sql"
+	"errors"
 	"net/http"
+	"sort"
 	"strconv"
-	"strings"
+	"time"
 
 	"health/db/queries"
 )
+
+const recentWindowDays = 7
+const recentItemsCap = 20
 
 func (h *Handler) GetLog(w http.ResponseWriter, r *http.Request) {
 	userID, err := parseID(r, "id")
@@ -33,14 +39,10 @@ func (h *Handler) GetLog(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, entries)
 }
 
-type addLogBody struct {
-	FoodID          *int64  `json:"food_id"`
-	FoodName        string  `json:"food_name"`
-	FoodUnit        string  `json:"food_unit"`
-	CaloriesPerUnit float64 `json:"calories_per_unit"`
-	ProteinPerUnit  float64 `json:"protein_per_unit"`
-	Quantity        float64 `json:"quantity"`
-	Date            string  `json:"date"`
+type logFoodBody struct {
+	FoodID   *int64  `json:"food_id"`
+	Quantity float64 `json:"quantity"`
+	Date     string  `json:"date"`
 }
 
 func (h *Handler) AddLogEntry(w http.ResponseWriter, r *http.Request) {
@@ -49,50 +51,46 @@ func (h *Handler) AddLogEntry(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	var body addLogBody
+	var body logFoodBody
 	if err := readJSON(r, &body); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	body.FoodName = strings.TrimSpace(body.FoodName)
-	body.FoodUnit = strings.TrimSpace(body.FoodUnit)
-	if body.FoodName == "" {
-		writeError(w, http.StatusBadRequest, "food_name required")
-		return
-	}
-	if body.FoodUnit == "" {
-		writeError(w, http.StatusBadRequest, "food_unit required")
+	if body.FoodID == nil || *body.FoodID <= 0 {
+		writeError(w, http.StatusBadRequest, "food_id required")
 		return
 	}
 	if body.Quantity <= 0 {
 		writeError(w, http.StatusBadRequest, "quantity must be > 0")
 		return
 	}
-	if body.CaloriesPerUnit < 0 {
-		writeError(w, http.StatusBadRequest, "calories_per_unit must be >= 0")
-		return
-	}
-	if body.ProteinPerUnit < 0 {
-		writeError(w, http.StatusBadRequest, "protein_per_unit must be >= 0")
-		return
-	}
 	if !validDate(body.Date) {
 		writeError(w, http.StatusBadRequest, "date must be YYYY-MM-DD")
 		return
 	}
+	food, err := h.Q.GetFood(r.Context(), *body.FoodID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "food not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	entry, err := h.Q.AddLogEntry(r.Context(), queries.AddLogEntryParams{
-		UserID:           userID,
-		FoodID:           body.FoodID,
-		Date:             body.Date,
-		FoodName:         body.FoodName,
-		FoodUnit:         body.FoodUnit,
-		CaloriesPerUnit:  body.CaloriesPerUnit,
-		ProteinPerUnit:   body.ProteinPerUnit,
-		Quantity:         body.Quantity,
-		Calories:         body.CaloriesPerUnit * body.Quantity,
-		Protein:          body.ProteinPerUnit * body.Quantity,
-		SourceRecipeID:   nil,
-		SourceRecipeName: nil,
+		UserID:               userID,
+		FoodID:               &food.ID,
+		Date:                 body.Date,
+		FoodName:             food.Name,
+		FoodUnit:             food.Unit,
+		CaloriesPerUnit:      food.CaloriesPerUnit,
+		ProteinPerUnit:       food.ProteinPerUnit,
+		Quantity:             body.Quantity,
+		Calories:             food.CaloriesPerUnit * body.Quantity,
+		Protein:              food.ProteinPerUnit * body.Quantity,
+		SourceRecipeID:       nil,
+		SourceRecipeName:     nil,
+		SourceRecipeServings: nil,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -149,19 +147,76 @@ func (h *Handler) DeleteLogEntriesByRecipe(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNoContent)
 }
 
+type recentItem struct {
+	Kind            string  `json:"kind"`
+	FoodID          *int64  `json:"food_id,omitempty"`
+	FoodName        string  `json:"food_name,omitempty"`
+	FoodUnit        string  `json:"food_unit,omitempty"`
+	CaloriesPerUnit float64 `json:"calories_per_unit"`
+	ProteinPerUnit  float64 `json:"protein_per_unit"`
+	LastQuantity    float64 `json:"last_quantity"`
+	RecipeID        *int64  `json:"recipe_id,omitempty"`
+	RecipeName      string  `json:"recipe_name,omitempty"`
+	TotalCalories   float64 `json:"total_calories"`
+	TotalProtein    float64 `json:"total_protein"`
+	LastServings    float64 `json:"last_servings"`
+	maxID           int64
+}
+
 func (h *Handler) GetRecentFoods(w http.ResponseWriter, r *http.Request) {
 	userID, err := parseID(r, "id")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	rows, err := h.Q.GetRecentLoggedFoods(r.Context(), userID)
+	floor := time.Now().AddDate(0, 0, -recentWindowDays).Format("2006-01-02")
+
+	foods, err := h.Q.GetRecentLoggedFoods(r.Context(), queries.GetRecentLoggedFoodsParams{
+		UserID:    userID,
+		DateFloor: floor,
+	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if rows == nil {
-		rows = []queries.GetRecentLoggedFoodsRow{}
+	recipes, err := h.Q.GetRecentLoggedRecipes(r.Context(), queries.GetRecentLoggedRecipesParams{
+		UserID:    userID,
+		DateFloor: floor,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
 	}
-	writeJSON(w, http.StatusOK, rows)
+
+	items := make([]recentItem, 0, len(foods)+len(recipes))
+	for _, f := range foods {
+		items = append(items, recentItem{
+			Kind:            "food",
+			FoodID:          f.FoodID,
+			FoodName:        f.FoodName,
+			FoodUnit:        f.FoodUnit,
+			CaloriesPerUnit: f.CaloriesPerUnit,
+			ProteinPerUnit:  f.ProteinPerUnit,
+			LastQuantity:    f.LastQuantity,
+			maxID:           f.MaxID,
+		})
+	}
+	for _, rec := range recipes {
+		rid := rec.RecipeID
+		items = append(items, recentItem{
+			Kind:          "recipe",
+			RecipeID:      &rid,
+			RecipeName:    rec.RecipeName,
+			TotalCalories: rec.TotalCalories,
+			TotalProtein:  rec.TotalProtein,
+			LastServings:  rec.LastServings,
+			maxID:         rec.MaxID,
+		})
+	}
+	sort.Slice(items, func(i, j int) bool { return items[i].maxID > items[j].maxID })
+	if len(items) > recentItemsCap {
+		items = items[:recentItemsCap]
+	}
+
+	writeJSON(w, http.StatusOK, items)
 }

@@ -2,7 +2,7 @@ import type {
   User,
   Food,
   LogEntry,
-  RecentFood,
+  RecentItem,
   DailyMetric,
   MetricsUpdate,
   TodaySummary,
@@ -79,7 +79,7 @@ export const api = {
   deleteLog: (userId: number, entryId: number) =>
     request<void>(`${BASE}/users/${userId}/log/${entryId}`, { method: 'DELETE' }),
   recentFoods: (userId: number) =>
-    request<RecentFood[]>(`${BASE}/users/${userId}/recent-foods`),
+    request<RecentItem[]>(`${BASE}/users/${userId}/recent-foods`),
 
   logRecipe: (userId: number, payload: LogRecipePayload) =>
     request<LogEntry[]>(`${BASE}/users/${userId}/log/recipe`, {

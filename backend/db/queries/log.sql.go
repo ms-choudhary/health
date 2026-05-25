@@ -154,35 +154,44 @@ func (q *Queries) GetLogForDate(ctx context.Context, arg GetLogForDateParams) ([
 
 const getRecentLoggedFoods = `-- name: GetRecentLoggedFoods :many
 SELECT
+  le.food_id,
   le.food_name,
   le.food_unit,
   le.calories_per_unit,
   le.protein_per_unit,
-  le.food_id,
-  le.quantity AS last_quantity
+  le.quantity AS last_quantity,
+  latest.max_id AS max_id
 FROM log_entries le
 INNER JOIN (
-  SELECT inner_le.food_name AS fn, MAX(inner_le.id) AS max_id
+  SELECT inner_le.food_id AS fid, CAST(MAX(inner_le.id) AS INTEGER) AS max_id
   FROM log_entries inner_le
-  WHERE inner_le.user_id = ?1
+  WHERE inner_le.user_id          = ?1
     AND inner_le.source_recipe_id IS NULL
-  GROUP BY inner_le.food_name
+    AND inner_le.food_id          IS NOT NULL
+    AND inner_le.date             >= ?2
+  GROUP BY inner_le.food_id
 ) latest ON le.id = latest.max_id
 ORDER BY le.id DESC
 LIMIT 20
 `
 
+type GetRecentLoggedFoodsParams struct {
+	UserID    int64  `json:"user_id"`
+	DateFloor string `json:"date_floor"`
+}
+
 type GetRecentLoggedFoodsRow struct {
+	FoodID          *int64  `json:"food_id"`
 	FoodName        string  `json:"food_name"`
 	FoodUnit        string  `json:"food_unit"`
 	CaloriesPerUnit float64 `json:"calories_per_unit"`
 	ProteinPerUnit  float64 `json:"protein_per_unit"`
-	FoodID          *int64  `json:"food_id"`
 	LastQuantity    float64 `json:"last_quantity"`
+	MaxID           int64   `json:"max_id"`
 }
 
-func (q *Queries) GetRecentLoggedFoods(ctx context.Context, userID int64) ([]GetRecentLoggedFoodsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getRecentLoggedFoods, userID)
+func (q *Queries) GetRecentLoggedFoods(ctx context.Context, arg GetRecentLoggedFoodsParams) ([]GetRecentLoggedFoodsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getRecentLoggedFoods, arg.UserID, arg.DateFloor)
 	if err != nil {
 		return nil, err
 	}
@@ -191,12 +200,82 @@ func (q *Queries) GetRecentLoggedFoods(ctx context.Context, userID int64) ([]Get
 	for rows.Next() {
 		var i GetRecentLoggedFoodsRow
 		if err := rows.Scan(
+			&i.FoodID,
 			&i.FoodName,
 			&i.FoodUnit,
 			&i.CaloriesPerUnit,
 			&i.ProteinPerUnit,
-			&i.FoodID,
 			&i.LastQuantity,
+			&i.MaxID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getRecentLoggedRecipes = `-- name: GetRecentLoggedRecipes :many
+SELECT
+  r.id   AS recipe_id,
+  r.name AS recipe_name,
+  COALESCE(le.source_recipe_servings, 1) AS last_servings,
+  CAST(COALESCE(SUM(f.calories_per_unit * ri.quantity), 0) AS REAL) AS total_calories,
+  CAST(COALESCE(SUM(f.protein_per_unit  * ri.quantity), 0) AS REAL) AS total_protein,
+  latest.max_id AS max_id
+FROM (
+  SELECT inner_le.source_recipe_id AS rid, CAST(MAX(inner_le.id) AS INTEGER) AS max_id
+  FROM log_entries inner_le
+  WHERE inner_le.user_id          = ?1
+    AND inner_le.source_recipe_id IS NOT NULL
+    AND inner_le.date             >= ?2
+  GROUP BY inner_le.source_recipe_id
+) latest
+JOIN log_entries le ON le.id = latest.max_id
+JOIN recipes      r  ON r.id = latest.rid
+LEFT JOIN recipe_ingredients ri ON ri.recipe_id = r.id
+LEFT JOIN foods              f  ON f.id          = ri.food_id
+GROUP BY r.id, le.source_recipe_servings, latest.max_id
+ORDER BY latest.max_id DESC
+LIMIT 10
+`
+
+type GetRecentLoggedRecipesParams struct {
+	UserID    int64  `json:"user_id"`
+	DateFloor string `json:"date_floor"`
+}
+
+type GetRecentLoggedRecipesRow struct {
+	RecipeID      int64   `json:"recipe_id"`
+	RecipeName    string  `json:"recipe_name"`
+	LastServings  float64 `json:"last_servings"`
+	TotalCalories float64 `json:"total_calories"`
+	TotalProtein  float64 `json:"total_protein"`
+	MaxID         int64   `json:"max_id"`
+}
+
+func (q *Queries) GetRecentLoggedRecipes(ctx context.Context, arg GetRecentLoggedRecipesParams) ([]GetRecentLoggedRecipesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getRecentLoggedRecipes, arg.UserID, arg.DateFloor)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetRecentLoggedRecipesRow
+	for rows.Next() {
+		var i GetRecentLoggedRecipesRow
+		if err := rows.Scan(
+			&i.RecipeID,
+			&i.RecipeName,
+			&i.LastServings,
+			&i.TotalCalories,
+			&i.TotalProtein,
+			&i.MaxID,
 		); err != nil {
 			return nil, err
 		}

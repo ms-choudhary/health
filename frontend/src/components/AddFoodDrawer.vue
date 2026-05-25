@@ -4,7 +4,7 @@ import { api } from '@/lib/api'
 import { formatNumber } from '@/lib/utils'
 import type {
   Food,
-  RecentFood,
+  RecentItem,
   RecipeListItem,
   AddLogPayload,
   Pickable,
@@ -16,7 +16,7 @@ import { Search, X } from 'lucide-vue-next'
 
 interface PickedFood {
   kind: 'food'
-  food_id: number | null
+  food_id: number
   food_name: string
   food_unit: string
   calories_per_unit: number
@@ -42,7 +42,7 @@ const emit = defineEmits<{
 }>()
 
 const query = ref<string>('')
-const recent = ref<RecentFood[]>([])
+const recent = ref<RecentItem[]>([])
 const results = ref<Pickable[]>([])
 const picked = ref<Picked | null>(null)
 const saving = ref<boolean>(false)
@@ -94,15 +94,26 @@ watch(query, (v) => {
   }, 200)
 })
 
-function pickRecent(item: RecentFood): void {
+function pickRecent(item: RecentItem): void {
+  if (item.kind === 'food') {
+    picked.value = {
+      kind: 'food',
+      food_id: item.food_id,
+      food_name: item.food_name,
+      food_unit: item.food_unit,
+      calories_per_unit: item.calories_per_unit,
+      protein_per_unit: item.protein_per_unit,
+      quantity: String(item.last_quantity),
+    }
+    return
+  }
   picked.value = {
-    kind: 'food',
-    food_id: item.food_id,
-    food_name: item.food_name,
-    food_unit: item.food_unit,
-    calories_per_unit: item.calories_per_unit,
-    protein_per_unit: item.protein_per_unit,
-    quantity: String(item.last_quantity),
+    kind: 'recipe',
+    recipe_id: item.recipe_id,
+    recipe_name: item.recipe_name,
+    total_calories: item.total_calories,
+    total_protein: item.total_protein,
+    scale: String(item.last_servings),
   }
 }
 
@@ -146,10 +157,6 @@ async function confirm(): Promise<void> {
     errMsg.value = ''
     const payload: AddLogPayload = {
       food_id: picked.value.food_id,
-      food_name: picked.value.food_name,
-      food_unit: picked.value.food_unit,
-      calories_per_unit: picked.value.calories_per_unit,
-      protein_per_unit: picked.value.protein_per_unit,
       quantity: n,
       date: props.date,
     }
@@ -294,24 +301,43 @@ onUnmounted(() => {
             >
               No recent foods — search above to add one.
             </div>
-            <button
-              v-for="item in recent"
-              :key="item.food_name"
-              type="button"
-              class="text-left p-3 rounded-lg border border-border hover:bg-muted transition-colors flex items-center justify-between gap-3"
-              @click="pickRecent(item)"
-            >
-              <div class="min-w-0">
-                <div class="font-medium truncate">{{ item.food_name }}</div>
-                <div class="text-xs text-muted-foreground">
-                  {{ item.last_quantity }} {{ item.food_unit }} ·
-                  {{ Math.round(item.last_quantity * item.calories_per_unit) }} kcal last time
+            <template v-for="item in recent">
+              <button
+                v-if="item.kind === 'food'"
+                :key="`f-${item.food_id}`"
+                type="button"
+                class="text-left p-3 rounded-lg border border-border hover:bg-muted transition-colors flex items-center justify-between gap-3"
+                @click="pickRecent(item)"
+              >
+                <div class="min-w-0">
+                  <div class="font-medium truncate">{{ item.food_name }}</div>
+                  <div class="text-xs text-muted-foreground">
+                    {{ item.last_quantity }} {{ item.food_unit }} ·
+                    {{ Math.round(item.last_quantity * item.calories_per_unit) }} kcal last time
+                  </div>
                 </div>
-              </div>
-              <Badge variant="secondary">
-                {{ Math.round(item.last_quantity * item.calories_per_unit) }}
-              </Badge>
-            </button>
+                <Badge variant="secondary">
+                  {{ Math.round(item.last_quantity * item.calories_per_unit) }}
+                </Badge>
+              </button>
+              <button
+                v-else
+                :key="`r-${item.recipe_id}`"
+                type="button"
+                class="text-left p-3 rounded-lg border border-border hover:bg-muted transition-colors flex items-center justify-between gap-3"
+                @click="pickRecent(item)"
+              >
+                <div class="min-w-0">
+                  <div class="font-medium truncate">{{ item.recipe_name }}</div>
+                  <div class="text-xs text-muted-foreground">
+                    {{ formatNumber(item.last_servings, item.last_servings % 1 ? 1 : 0) }}
+                    serving{{ item.last_servings === 1 ? '' : 's' }} last time ·
+                    {{ Math.round(item.last_servings * item.total_calories) }} kcal
+                  </div>
+                </div>
+                <Badge variant="secondary">Recipe</Badge>
+              </button>
+            </template>
           </div>
 
           <div v-else class="flex flex-col gap-2">
