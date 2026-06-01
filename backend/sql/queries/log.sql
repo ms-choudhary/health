@@ -23,7 +23,7 @@ INNER JOIN (
   GROUP BY inner_le.food_id
 ) latest ON le.id = latest.max_id
 ORDER BY le.id DESC
-LIMIT 20;
+LIMIT 50;
 
 -- name: GetRecentLoggedRecipes :many
 SELECT
@@ -47,7 +47,7 @@ LEFT JOIN recipe_ingredients ri ON ri.recipe_id = r.id
 LEFT JOIN foods              f  ON f.id          = ri.food_id
 GROUP BY r.id, le.source_recipe_servings, latest.max_id
 ORDER BY latest.max_id DESC
-LIMIT 10;
+LIMIT 20;
 
 -- name: AddLogEntry :one
 INSERT INTO log_entries
