@@ -152,7 +152,7 @@ async function save(): Promise<void> {
         <template v-else>
           <select
             v-model="unit"
-            class="h-9 rounded-md border border-input bg-background px-2 text-sm"
+            class="h-9 rounded-md border border-input bg-background px-2 text-base md:text-sm"
           >
             <option v-for="u in UNITS" :key="u" :value="u">{{ u }}</option>
           </select>
