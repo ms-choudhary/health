@@ -196,24 +196,52 @@ function onKey(e: KeyboardEvent): void {
   if (e.key === 'Escape') emit('close')
 }
 
+// Track the visual viewport so the drawer stays pinned above the on-screen
+// keyboard. On iOS the keyboard shrinks the visual viewport but not the layout
+// viewport, so a short, bottom-anchored drawer would otherwise hide behind it.
+const vvHeight = ref<number>(typeof window !== 'undefined' ? window.innerHeight : 0)
+const vvTop = ref<number>(0)
+
+function onViewportChange(): void {
+  const vv = window.visualViewport
+  if (!vv) return
+  vvHeight.value = vv.height
+  vvTop.value = vv.offsetTop
+}
+
 onMounted(() => {
   document.body.style.overflow = 'hidden'
   window.addEventListener('keydown', onKey)
+  const vv = window.visualViewport
+  if (vv) {
+    vv.addEventListener('resize', onViewportChange)
+    vv.addEventListener('scroll', onViewportChange)
+    onViewportChange()
+  }
   void loadRecent()
 })
 
 onUnmounted(() => {
   document.body.style.overflow = ''
   window.removeEventListener('keydown', onKey)
+  const vv = window.visualViewport
+  if (vv) {
+    vv.removeEventListener('resize', onViewportChange)
+    vv.removeEventListener('scroll', onViewportChange)
+  }
 })
 </script>
 
 <template>
   <Teleport to="body">
-    <div class="fixed inset-0 z-50 flex items-end justify-center" @click.self="emit('close')">
+    <div
+      class="fixed left-0 right-0 z-50 flex items-end justify-center"
+      :style="{ top: `${vvTop}px`, height: `${vvHeight}px` }"
+      @click.self="emit('close')"
+    >
       <div class="absolute inset-0 bg-black/50" />
       <div
-        class="relative w-full max-w-lg bg-card text-card-foreground border-t border-border rounded-t-2xl p-4 pb-8 flex flex-col gap-3 max-h-[85vh] overflow-y-auto"
+        class="relative w-full max-w-lg bg-card text-card-foreground border-t border-border rounded-t-2xl p-4 pb-8 flex flex-col gap-3 max-h-[calc(100%-2rem)] overflow-y-auto"
       >
         <div class="mx-auto h-1 w-10 rounded-full bg-border" />
 
