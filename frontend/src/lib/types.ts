@@ -33,24 +33,13 @@ export interface LogEntry {
   source_recipe_servings: number | null
 }
 
-export type RecentItem =
-  | {
-      kind: 'food'
-      food_id: number
-      food_name: string
-      food_unit: string
-      calories_per_unit: number
-      protein_per_unit: number
-      last_quantity: number
-    }
-  | {
-      kind: 'recipe'
-      recipe_id: number
-      recipe_name: string
-      total_calories: number
-      total_protein: number
-      last_servings: number
-    }
+export interface RecentItem {
+  recipe_id: number
+  recipe_name: string
+  total_calories: number
+  total_protein: number
+  last_servings: number
+}
 
 export interface DailyMetric {
   id: number
@@ -85,12 +74,6 @@ export interface TodaySummary {
   target: number
   protein_consumed: number
   target_protein: number
-}
-
-export interface AddLogPayload {
-  food_id: number
-  quantity: number
-  date: string
 }
 
 export interface CreateFoodPayload {
@@ -146,7 +129,3 @@ export interface LogRecipePayload {
   servings: number
   date: string
 }
-
-export type Pickable =
-  | { kind: 'food'; food: Food }
-  | { kind: 'recipe'; recipe: RecipeListItem }

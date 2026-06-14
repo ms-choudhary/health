@@ -30,7 +30,7 @@ import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Avatar from '@/components/ui/Avatar.vue'
-import AddFoodDrawer from '@/components/AddFoodDrawer.vue'
+import AddRecipeDrawer from '@/components/AddRecipeDrawer.vue'
 import ProgressCharts from '@/components/ProgressCharts.vue'
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-vue-next'
 
@@ -226,7 +226,7 @@ async function removeRecipeGroup(recipeId: number) {
   entries.value = entries.value.filter((e) => e.source_recipe_id !== recipeId)
 }
 
-async function onFoodAdded() {
+async function onRecipeAdded() {
   showDrawer.value = false
   await loadLog()
 }
@@ -373,7 +373,7 @@ onMounted(async () => {
 
       <Button variant="outline" @click="showDrawer = true">
         <Plus class="h-4 w-4" />
-        Add food
+        Add recipe
       </Button>
 
       <Card>
@@ -463,11 +463,11 @@ onMounted(async () => {
     </section>
   </div>
 
-  <AddFoodDrawer
+  <AddRecipeDrawer
     v-if="showDrawer"
     :user-id="userId"
     :date="date"
     @close="showDrawer = false"
-    @added="onFoodAdded"
+    @added="onRecipeAdded"
   />
 </template>

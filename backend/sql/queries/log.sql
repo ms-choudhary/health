@@ -3,28 +3,6 @@ SELECT * FROM log_entries
 WHERE user_id = ? AND date = ?
 ORDER BY id;
 
--- name: GetRecentLoggedFoods :many
-SELECT
-  le.food_id,
-  le.food_name,
-  le.food_unit,
-  le.calories_per_unit,
-  le.protein_per_unit,
-  le.quantity AS last_quantity,
-  latest.max_id AS max_id
-FROM log_entries le
-INNER JOIN (
-  SELECT inner_le.food_id AS fid, CAST(MAX(inner_le.id) AS INTEGER) AS max_id
-  FROM log_entries inner_le
-  WHERE inner_le.user_id          = sqlc.arg(user_id)
-    AND inner_le.source_recipe_id IS NULL
-    AND inner_le.food_id          IS NOT NULL
-    AND inner_le.date             >= sqlc.arg(date_floor)
-  GROUP BY inner_le.food_id
-) latest ON le.id = latest.max_id
-ORDER BY le.id DESC
-LIMIT 50;
-
 -- name: GetRecentLoggedRecipes :many
 SELECT
   r.id   AS recipe_id,

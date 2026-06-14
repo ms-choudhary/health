@@ -124,7 +124,7 @@ onMounted(() => {
 
     <div class="flex gap-2">
       <Button :variant="tab === 'foods' ? 'default' : 'outline'" size="sm" @click="tab = 'foods'">
-        Foods
+        Ingredients
       </Button>
       <Button :variant="tab === 'recipes' ? 'default' : 'outline'" size="sm" @click="tab = 'recipes'">
         Recipes
@@ -132,7 +132,7 @@ onMounted(() => {
     </div>
 
     <div class="relative">
-      <Input v-model="query" type="search" :placeholder="tab === 'foods' ? 'Search food…' : 'Search recipes…'" />
+      <Input v-model="query" type="search" :placeholder="tab === 'foods' ? 'Search ingredients…' : 'Search recipes…'" />
       <Search class="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
     </div>
 
@@ -142,8 +142,8 @@ onMounted(() => {
       </div>
 
       <div v-else-if="foods.length === 0" class="text-center py-10 text-muted-foreground text-sm">
-        <template v-if="query">No food matches "{{ query }}".</template>
-        <template v-else>No foods yet — tap "Add food" below.</template>
+        <template v-if="query">No ingredient matches "{{ query }}".</template>
+        <template v-else>No ingredients yet — tap "Add ingredient" below.</template>
       </div>
 
       <div v-else class="flex flex-col gap-2">
@@ -168,7 +168,7 @@ onMounted(() => {
 
       <Button class="mt-2" @click="openNewFood">
         <Plus class="h-4 w-4" />
-        Add food
+        Add ingredient
       </Button>
     </template>
 

@@ -6,7 +6,6 @@ import type {
   DailyMetric,
   MetricsUpdate,
   TodaySummary,
-  AddLogPayload,
   CreateFoodPayload,
   UpdateFoodPayload,
   CreateUserPayload,
@@ -71,15 +70,10 @@ export const api = {
 
   getLog: (userId: number, date: string) =>
     request<LogEntry[]>(`${BASE}/users/${userId}/log?date=${date}`),
-  addLog: (userId: number, payload: AddLogPayload) =>
-    request<LogEntry>(`${BASE}/users/${userId}/log`, {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    }),
   deleteLog: (userId: number, entryId: number) =>
     request<void>(`${BASE}/users/${userId}/log/${entryId}`, { method: 'DELETE' }),
-  recentFoods: (userId: number) =>
-    request<RecentItem[]>(`${BASE}/users/${userId}/recent-foods`),
+  recentRecipes: (userId: number) =>
+    request<RecentItem[]>(`${BASE}/users/${userId}/recent`),
 
   logRecipe: (userId: number, payload: LogRecipePayload) =>
     request<LogEntry[]>(`${BASE}/users/${userId}/log/recipe`, {

@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"database/sql"
-	"errors"
 	"net/http"
 	"sort"
 	"strconv"
@@ -37,66 +35,6 @@ func (h *Handler) GetLog(w http.ResponseWriter, r *http.Request) {
 		entries = []queries.LogEntry{}
 	}
 	writeJSON(w, http.StatusOK, entries)
-}
-
-type logFoodBody struct {
-	FoodID   *int64  `json:"food_id"`
-	Quantity float64 `json:"quantity"`
-	Date     string  `json:"date"`
-}
-
-func (h *Handler) AddLogEntry(w http.ResponseWriter, r *http.Request) {
-	userID, err := parseID(r, "id")
-	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	var body logFoodBody
-	if err := readJSON(r, &body); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	if body.FoodID == nil || *body.FoodID <= 0 {
-		writeError(w, http.StatusBadRequest, "food_id required")
-		return
-	}
-	if body.Quantity <= 0 {
-		writeError(w, http.StatusBadRequest, "quantity must be > 0")
-		return
-	}
-	if !validDate(body.Date) {
-		writeError(w, http.StatusBadRequest, "date must be YYYY-MM-DD")
-		return
-	}
-	food, err := h.Q.GetFood(r.Context(), *body.FoodID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			writeError(w, http.StatusNotFound, "food not found")
-			return
-		}
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	entry, err := h.Q.AddLogEntry(r.Context(), queries.AddLogEntryParams{
-		UserID:               userID,
-		FoodID:               &food.ID,
-		Date:                 body.Date,
-		FoodName:             food.Name,
-		FoodUnit:             food.Unit,
-		CaloriesPerUnit:      food.CaloriesPerUnit,
-		ProteinPerUnit:       food.ProteinPerUnit,
-		Quantity:             body.Quantity,
-		Calories:             food.CaloriesPerUnit * body.Quantity,
-		Protein:              food.ProteinPerUnit * body.Quantity,
-		SourceRecipeID:       nil,
-		SourceRecipeName:     nil,
-		SourceRecipeServings: nil,
-	})
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	writeJSON(w, http.StatusCreated, entry)
 }
 
 func (h *Handler) DeleteLogEntry(w http.ResponseWriter, r *http.Request) {
@@ -148,22 +86,15 @@ func (h *Handler) DeleteLogEntriesByRecipe(w http.ResponseWriter, r *http.Reques
 }
 
 type recentItem struct {
-	Kind            string  `json:"kind"`
-	FoodID          *int64  `json:"food_id,omitempty"`
-	FoodName        string  `json:"food_name,omitempty"`
-	FoodUnit        string  `json:"food_unit,omitempty"`
-	CaloriesPerUnit float64 `json:"calories_per_unit"`
-	ProteinPerUnit  float64 `json:"protein_per_unit"`
-	LastQuantity    float64 `json:"last_quantity"`
-	RecipeID        *int64  `json:"recipe_id,omitempty"`
-	RecipeName      string  `json:"recipe_name,omitempty"`
-	TotalCalories   float64 `json:"total_calories"`
-	TotalProtein    float64 `json:"total_protein"`
-	LastServings    float64 `json:"last_servings"`
-	maxID           int64
+	RecipeID      *int64  `json:"recipe_id"`
+	RecipeName    string  `json:"recipe_name"`
+	TotalCalories float64 `json:"total_calories"`
+	TotalProtein  float64 `json:"total_protein"`
+	LastServings  float64 `json:"last_servings"`
+	maxID         int64
 }
 
-func (h *Handler) GetRecentFoods(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetRecentRecipes(w http.ResponseWriter, r *http.Request) {
 	userID, err := parseID(r, "id")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
@@ -171,14 +102,6 @@ func (h *Handler) GetRecentFoods(w http.ResponseWriter, r *http.Request) {
 	}
 	floor := time.Now().AddDate(0, 0, -recentWindowDays).Format("2006-01-02")
 
-	foods, err := h.Q.GetRecentLoggedFoods(r.Context(), queries.GetRecentLoggedFoodsParams{
-		UserID:    userID,
-		DateFloor: floor,
-	})
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
 	recipes, err := h.Q.GetRecentLoggedRecipes(r.Context(), queries.GetRecentLoggedRecipesParams{
 		UserID:    userID,
 		DateFloor: floor,
@@ -188,23 +111,10 @@ func (h *Handler) GetRecentFoods(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	items := make([]recentItem, 0, len(foods)+len(recipes))
-	for _, f := range foods {
-		items = append(items, recentItem{
-			Kind:            "food",
-			FoodID:          f.FoodID,
-			FoodName:        f.FoodName,
-			FoodUnit:        f.FoodUnit,
-			CaloriesPerUnit: f.CaloriesPerUnit,
-			ProteinPerUnit:  f.ProteinPerUnit,
-			LastQuantity:    f.LastQuantity,
-			maxID:           f.MaxID,
-		})
-	}
+	items := make([]recentItem, 0, len(recipes))
 	for _, rec := range recipes {
 		rid := rec.RecipeID
 		items = append(items, recentItem{
-			Kind:          "recipe",
 			RecipeID:      &rid,
 			RecipeName:    rec.RecipeName,
 			TotalCalories: rec.TotalCalories,
