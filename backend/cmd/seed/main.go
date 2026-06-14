@@ -12,7 +12,7 @@ import (
 	"health/db/queries"
 )
 
-type seedFood struct {
+type seedIngredient struct {
 	name    string
 	unit    string
 	cpu     float64
@@ -47,7 +47,7 @@ func main() {
 		createdUsers = append(createdUsers, row)
 	}
 
-	foods := []seedFood{
+	ingredients := []seedIngredient{
 		{"Oatmeal", "g", 3.9, 0.13},
 		{"Banana", "piece", 89, 1.1},
 		{"Grilled Chicken", "g", 1.65, 0.31},
@@ -59,23 +59,23 @@ func main() {
 		{"Avocado", "g", 1.6, 0.02},
 		{"Salmon", "g", 2.08, 0.20},
 	}
-	createdFoods := make([]queries.Food, 0, len(foods))
-	for _, f := range foods {
-		row, err := q.CreateFood(ctx, queries.CreateFoodParams{
+	createdIngredients := make([]queries.Ingredient, 0, len(ingredients))
+	for _, f := range ingredients {
+		row, err := q.CreateIngredient(ctx, queries.CreateIngredientParams{
 			Name: f.name, Unit: f.unit, CaloriesPerUnit: f.cpu, ProteinPerUnit: f.protein,
 		})
 		if err != nil {
 			log.Fatal(err)
 		}
-		createdFoods = append(createdFoods, row)
+		createdIngredients = append(createdIngredients, row)
 	}
 
-	foodByName := make(map[string]queries.Food, len(createdFoods))
-	for _, f := range createdFoods {
-		foodByName[f.Name] = f
+	ingredientByName := make(map[string]queries.Ingredient, len(createdIngredients))
+	for _, f := range createdIngredients {
+		ingredientByName[f.Name] = f
 	}
 	type seedRecipeIngredient struct {
-		foodName string
+		ingredientName string
 		quantity float64
 	}
 	type seedRecipe struct {
@@ -123,13 +123,13 @@ func main() {
 			log.Fatal(err)
 		}
 		for _, ing := range dr.ingredients {
-			food, ok := foodByName[ing.foodName]
+			ingredient, ok := ingredientByName[ing.ingredientName]
 			if !ok {
-				log.Fatalf("seed recipe ingredient %q not found", ing.foodName)
+				log.Fatalf("seed recipe ingredient %q not found", ing.ingredientName)
 			}
 			if _, err := q.AddRecipeIngredient(ctx, queries.AddRecipeIngredientParams{
 				RecipeID: recipe.ID,
-				FoodID:   food.ID,
+				IngredientID:   ingredient.ID,
 				Quantity: ing.quantity,
 			}); err != nil {
 				log.Fatal(err)
@@ -167,8 +167,8 @@ func main() {
 					qty := ing.Quantity * servings
 					rid, rname := recipe.ID, recipe.Name
 					if _, err := q.AddLogEntry(ctx, queries.AddLogEntryParams{
-						UserID: u.ID, FoodID: &ing.FoodID, Date: date,
-						FoodName: ing.FoodName, FoodUnit: ing.FoodUnit,
+						UserID: u.ID, IngredientID: &ing.IngredientID, Date: date,
+						IngredientName: ing.IngredientName, IngredientUnit: ing.IngredientUnit,
 						CaloriesPerUnit: ing.CaloriesPerUnit, ProteinPerUnit: ing.ProteinPerUnit,
 						Quantity: qty,
 						Calories: ing.CaloriesPerUnit * qty, Protein: ing.ProteinPerUnit * qty,
@@ -181,6 +181,6 @@ func main() {
 		}
 	}
 
-	fmt.Printf("Seeded %d users, %d foods, %d recipes, ~14 days of log entries each.\n",
-		len(createdUsers), len(createdFoods), len(createdRecipes))
+	fmt.Printf("Seeded %d users, %d ingredients, %d recipes, ~14 days of log entries each.\n",
+		len(createdUsers), len(createdIngredients), len(createdRecipes))
 }

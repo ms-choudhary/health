@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
   created_at      TEXT    NOT NULL DEFAULT (date('now'))
 );
 
-CREATE TABLE IF NOT EXISTS foods (
+CREATE TABLE IF NOT EXISTS ingredients (
   id                INTEGER PRIMARY KEY AUTOINCREMENT,
   name              TEXT NOT NULL,
   unit              TEXT NOT NULL DEFAULT 'g',
@@ -19,10 +19,10 @@ CREATE TABLE IF NOT EXISTS foods (
 CREATE TABLE IF NOT EXISTS log_entries (
   id                  INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id             INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  food_id             INTEGER REFERENCES foods(id) ON DELETE SET NULL,
+  ingredient_id             INTEGER REFERENCES ingredients(id) ON DELETE SET NULL,
   date                TEXT NOT NULL,
-  food_name           TEXT NOT NULL,
-  food_unit           TEXT NOT NULL,
+  ingredient_name           TEXT NOT NULL,
+  ingredient_unit           TEXT NOT NULL,
   calories_per_unit   REAL NOT NULL,
   protein_per_unit    REAL NOT NULL DEFAULT 0,
   quantity            REAL NOT NULL,
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS recipes (
 CREATE TABLE IF NOT EXISTS recipe_ingredients (
   id        INTEGER PRIMARY KEY AUTOINCREMENT,
   recipe_id INTEGER NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
-  food_id   INTEGER NOT NULL REFERENCES foods(id)   ON DELETE RESTRICT,
+  ingredient_id   INTEGER NOT NULL REFERENCES ingredients(id)   ON DELETE RESTRICT,
   quantity  REAL    NOT NULL CHECK(quantity > 0)
 );
 

@@ -7,7 +7,7 @@ export interface User {
   created_at: string
 }
 
-export interface Food {
+export interface Ingredient {
   id: number
   name: string
   unit: string
@@ -19,10 +19,10 @@ export interface Food {
 export interface LogEntry {
   id: number
   user_id: number
-  food_id: number | null
+  ingredient_id: number | null
   date: string
-  food_name: string
-  food_unit: string
+  ingredient_name: string
+  ingredient_unit: string
   calories_per_unit: number
   protein_per_unit: number
   quantity: number
@@ -76,14 +76,14 @@ export interface TodaySummary {
   target_protein: number
 }
 
-export interface CreateFoodPayload {
+export interface CreateIngredientPayload {
   name: string
   unit: string
   calories_per_unit: number
   protein_per_unit: number
 }
 
-export interface UpdateFoodPayload {
+export interface UpdateIngredientPayload {
   calories_per_unit: number
   protein_per_unit: number
 }
@@ -102,10 +102,10 @@ export interface RecipeListItem extends Recipe {
 export interface RecipeIngredient {
   id: number
   recipe_id: number
-  food_id: number
+  ingredient_id: number
   quantity: number
-  food_name: string
-  food_unit: string
+  ingredient_name: string
+  ingredient_unit: string
   calories_per_unit: number
   protein_per_unit: number
 }
@@ -115,7 +115,7 @@ export interface RecipeWithIngredients extends RecipeListItem {
 }
 
 export interface RecipeIngredientInput {
-  food_id: number
+  ingredient_id: number
   quantity: number
 }
 

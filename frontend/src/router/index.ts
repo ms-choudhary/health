@@ -11,7 +11,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/library',
     name: 'library',
-    component: () => import('@/views/FoodLibrary.vue'),
+    component: () => import('@/views/IngredientLibrary.vue'),
   },
 ]
 

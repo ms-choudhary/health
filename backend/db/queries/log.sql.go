@@ -11,20 +11,20 @@ import (
 
 const addLogEntry = `-- name: AddLogEntry :one
 INSERT INTO log_entries
-  (user_id, food_id, date, food_name, food_unit,
+  (user_id, ingredient_id, date, ingredient_name, ingredient_unit,
    calories_per_unit, protein_per_unit,
    quantity, calories, protein,
    source_recipe_id, source_recipe_name, source_recipe_servings)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, user_id, food_id, date, food_name, food_unit, calories_per_unit, protein_per_unit, quantity, calories, protein, source_recipe_id, source_recipe_name, source_recipe_servings
+RETURNING id, user_id, ingredient_id, date, ingredient_name, ingredient_unit, calories_per_unit, protein_per_unit, quantity, calories, protein, source_recipe_id, source_recipe_name, source_recipe_servings
 `
 
 type AddLogEntryParams struct {
 	UserID               int64    `json:"user_id"`
-	FoodID               *int64   `json:"food_id"`
+	IngredientID         *int64   `json:"ingredient_id"`
 	Date                 string   `json:"date"`
-	FoodName             string   `json:"food_name"`
-	FoodUnit             string   `json:"food_unit"`
+	IngredientName       string   `json:"ingredient_name"`
+	IngredientUnit       string   `json:"ingredient_unit"`
 	CaloriesPerUnit      float64  `json:"calories_per_unit"`
 	ProteinPerUnit       float64  `json:"protein_per_unit"`
 	Quantity             float64  `json:"quantity"`
@@ -38,10 +38,10 @@ type AddLogEntryParams struct {
 func (q *Queries) AddLogEntry(ctx context.Context, arg AddLogEntryParams) (LogEntry, error) {
 	row := q.db.QueryRowContext(ctx, addLogEntry,
 		arg.UserID,
-		arg.FoodID,
+		arg.IngredientID,
 		arg.Date,
-		arg.FoodName,
-		arg.FoodUnit,
+		arg.IngredientName,
+		arg.IngredientUnit,
 		arg.CaloriesPerUnit,
 		arg.ProteinPerUnit,
 		arg.Quantity,
@@ -55,10 +55,10 @@ func (q *Queries) AddLogEntry(ctx context.Context, arg AddLogEntryParams) (LogEn
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
-		&i.FoodID,
+		&i.IngredientID,
 		&i.Date,
-		&i.FoodName,
-		&i.FoodUnit,
+		&i.IngredientName,
+		&i.IngredientUnit,
 		&i.CaloriesPerUnit,
 		&i.ProteinPerUnit,
 		&i.Quantity,
@@ -104,7 +104,7 @@ func (q *Queries) DeleteLogEntry(ctx context.Context, arg DeleteLogEntryParams) 
 }
 
 const getLogForDate = `-- name: GetLogForDate :many
-SELECT id, user_id, food_id, date, food_name, food_unit, calories_per_unit, protein_per_unit, quantity, calories, protein, source_recipe_id, source_recipe_name, source_recipe_servings FROM log_entries
+SELECT id, user_id, ingredient_id, date, ingredient_name, ingredient_unit, calories_per_unit, protein_per_unit, quantity, calories, protein, source_recipe_id, source_recipe_name, source_recipe_servings FROM log_entries
 WHERE user_id = ? AND date = ?
 ORDER BY id
 `
@@ -126,10 +126,10 @@ func (q *Queries) GetLogForDate(ctx context.Context, arg GetLogForDateParams) ([
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
-			&i.FoodID,
+			&i.IngredientID,
 			&i.Date,
-			&i.FoodName,
-			&i.FoodUnit,
+			&i.IngredientName,
+			&i.IngredientUnit,
 			&i.CaloriesPerUnit,
 			&i.ProteinPerUnit,
 			&i.Quantity,
@@ -171,7 +171,7 @@ FROM (
 JOIN log_entries le ON le.id = latest.max_id
 JOIN recipes      r  ON r.id = latest.rid
 LEFT JOIN recipe_ingredients ri ON ri.recipe_id = r.id
-LEFT JOIN foods              f  ON f.id          = ri.food_id
+LEFT JOIN ingredients              f  ON f.id          = ri.ingredient_id
 GROUP BY r.id, le.source_recipe_servings, latest.max_id
 ORDER BY latest.max_id DESC
 LIMIT 20

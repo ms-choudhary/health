@@ -1,13 +1,13 @@
 import type {
   User,
-  Food,
+  Ingredient,
   LogEntry,
   RecentItem,
   DailyMetric,
   MetricsUpdate,
   TodaySummary,
-  CreateFoodPayload,
-  UpdateFoodPayload,
+  CreateIngredientPayload,
+  UpdateIngredientPayload,
   CreateUserPayload,
   UpdateUserPayload,
   Recipe,
@@ -56,17 +56,17 @@ export const api = {
   todaySummary: (userId: number) =>
     request<TodaySummary>(`${BASE}/users/${userId}/today`),
 
-  listFoods: (search = '') =>
-    request<Food[]>(`${BASE}/foods?q=${encodeURIComponent(search)}`),
-  createFood: (payload: CreateFoodPayload) =>
-    request<Food>(`${BASE}/foods`, { method: 'POST', body: JSON.stringify(payload) }),
-  updateFood: (id: number, payload: UpdateFoodPayload) =>
-    request<Food>(`${BASE}/foods/${id}`, {
+  listIngredients: (search = '') =>
+    request<Ingredient[]>(`${BASE}/ingredients?q=${encodeURIComponent(search)}`),
+  createIngredient: (payload: CreateIngredientPayload) =>
+    request<Ingredient>(`${BASE}/ingredients`, { method: 'POST', body: JSON.stringify(payload) }),
+  updateIngredient: (id: number, payload: UpdateIngredientPayload) =>
+    request<Ingredient>(`${BASE}/ingredients/${id}`, {
       method: 'PUT',
       body: JSON.stringify(payload),
     }),
-  deleteFood: (id: number) =>
-    request<void>(`${BASE}/foods/${id}`, { method: 'DELETE' }),
+  deleteIngredient: (id: number) =>
+    request<void>(`${BASE}/ingredients/${id}`, { method: 'DELETE' }),
 
   getLog: (userId: number, date: string) =>
     request<LogEntry[]>(`${BASE}/users/${userId}/log?date=${date}`),

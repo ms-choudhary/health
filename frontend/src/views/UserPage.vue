@@ -273,12 +273,12 @@ onMounted(async () => {
           <div v-for="i in 3" :key="i" class="h-8 rounded bg-muted animate-pulse" />
         </div>
         <div v-else-if="entries.length === 0" class="p-6 text-center text-muted-foreground text-sm">
-          No food logged yet.
+          No ingredient logged yet.
         </div>
         <table v-else class="w-full text-sm">
           <thead class="text-xs text-muted-foreground">
             <tr class="border-b border-border">
-              <th class="text-left font-medium px-3 py-2">Food</th>
+              <th class="text-left font-medium px-3 py-2">Ingredient</th>
               <th class="text-right font-medium px-3 py-2 w-16">Qty</th>
               <th class="text-right font-medium px-3 py-2 w-16">Cal</th>
               <th class="text-right font-medium px-3 py-2 w-16">Prot</th>
@@ -292,8 +292,8 @@ onMounted(async () => {
             >
               <tr v-if="g.kind === 'single'" class="border-b border-border last:border-0">
                 <td class="px-3 py-2">
-                  <div>{{ g.entry.food_name }}</div>
-                  <div class="text-xs text-muted-foreground">{{ g.entry.food_unit }}</div>
+                  <div>{{ g.entry.ingredient_name }}</div>
+                  <div class="text-xs text-muted-foreground">{{ g.entry.ingredient_unit }}</div>
                 </td>
                 <td class="text-right px-3 py-2">
                   {{ formatNumber(g.entry.quantity, g.entry.quantity % 1 ? 1 : 0) }}
@@ -344,8 +344,8 @@ onMounted(async () => {
                   class="border-b border-border last:border-0"
                 >
                   <td class="px-3 py-2 pl-6">
-                    <div class="text-muted-foreground">↳ {{ e.food_name }}</div>
-                    <div class="text-xs text-muted-foreground">{{ e.food_unit }}</div>
+                    <div class="text-muted-foreground">↳ {{ e.ingredient_name }}</div>
+                    <div class="text-xs text-muted-foreground">{{ e.ingredient_unit }}</div>
                   </td>
                   <td class="text-right px-3 py-2 text-muted-foreground">
                     {{ formatNumber(e.quantity, e.quantity % 1 ? 1 : 0) }}

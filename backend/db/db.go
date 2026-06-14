@@ -42,8 +42,8 @@ func Init(path string) (*DB, error) {
 	if err := ensureColumn(conn, "users", "target_protein", "INTEGER NOT NULL DEFAULT 0"); err != nil {
 		return nil, fmt.Errorf("migrate users.target_protein: %w", err)
 	}
-	if err := ensureColumn(conn, "foods", "protein_per_unit", "REAL NOT NULL DEFAULT 0"); err != nil {
-		return nil, fmt.Errorf("migrate foods.protein_per_unit: %w", err)
+	if err := ensureColumn(conn, "ingredients", "protein_per_unit", "REAL NOT NULL DEFAULT 0"); err != nil {
+		return nil, fmt.Errorf("migrate ingredients.protein_per_unit: %w", err)
 	}
 	if err := ensureColumn(conn, "log_entries", "protein_per_unit", "REAL NOT NULL DEFAULT 0"); err != nil {
 		return nil, fmt.Errorf("migrate log_entries.protein_per_unit: %w", err)

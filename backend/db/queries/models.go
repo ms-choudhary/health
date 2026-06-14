@@ -12,7 +12,7 @@ type DailyMetric struct {
 	Steps  *int64   `json:"steps"`
 }
 
-type Food struct {
+type Ingredient struct {
 	ID              int64   `json:"id"`
 	Name            string  `json:"name"`
 	Unit            string  `json:"unit"`
@@ -24,10 +24,10 @@ type Food struct {
 type LogEntry struct {
 	ID                   int64    `json:"id"`
 	UserID               int64    `json:"user_id"`
-	FoodID               *int64   `json:"food_id"`
+	IngredientID         *int64   `json:"ingredient_id"`
 	Date                 string   `json:"date"`
-	FoodName             string   `json:"food_name"`
-	FoodUnit             string   `json:"food_unit"`
+	IngredientName       string   `json:"ingredient_name"`
+	IngredientUnit       string   `json:"ingredient_unit"`
 	CaloriesPerUnit      float64  `json:"calories_per_unit"`
 	ProteinPerUnit       float64  `json:"protein_per_unit"`
 	Quantity             float64  `json:"quantity"`
@@ -45,10 +45,10 @@ type Recipe struct {
 }
 
 type RecipeIngredient struct {
-	ID       int64   `json:"id"`
-	RecipeID int64   `json:"recipe_id"`
-	FoodID   int64   `json:"food_id"`
-	Quantity float64 `json:"quantity"`
+	ID           int64   `json:"id"`
+	RecipeID     int64   `json:"recipe_id"`
+	IngredientID int64   `json:"ingredient_id"`
+	Quantity     float64 `json:"quantity"`
 }
 
 type User struct {

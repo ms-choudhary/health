@@ -1,6 +1,7 @@
 # Backend
 backend/health
 backend/health.db
+backend/health.db.*
 backend/health.db-*
 backend/*.exe
 

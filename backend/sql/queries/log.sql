@@ -22,14 +22,14 @@ FROM (
 JOIN log_entries le ON le.id = latest.max_id
 JOIN recipes      r  ON r.id = latest.rid
 LEFT JOIN recipe_ingredients ri ON ri.recipe_id = r.id
-LEFT JOIN foods              f  ON f.id          = ri.food_id
+LEFT JOIN ingredients              f  ON f.id          = ri.ingredient_id
 GROUP BY r.id, le.source_recipe_servings, latest.max_id
 ORDER BY latest.max_id DESC
 LIMIT 20;
 
 -- name: AddLogEntry :one
 INSERT INTO log_entries
-  (user_id, food_id, date, food_name, food_unit,
+  (user_id, ingredient_id, date, ingredient_name, ingredient_unit,
    calories_per_unit, protein_per_unit,
    quantity, calories, protein,
    source_recipe_id, source_recipe_name, source_recipe_servings)

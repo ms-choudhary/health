@@ -10,7 +10,7 @@ import (
 )
 
 type ingredientInput struct {
-	FoodID   int64   `json:"food_id"`
+	IngredientID   int64   `json:"ingredient_id"`
 	Quantity float64 `json:"quantity"`
 }
 
@@ -37,8 +37,8 @@ func validateRecipeBody(body recipeBody) (string, []ingredientInput, error) {
 		return "", nil, errors.New("at least one ingredient required")
 	}
 	for _, ing := range body.Ingredients {
-		if ing.FoodID <= 0 {
-			return "", nil, errors.New("ingredient food_id must be > 0")
+		if ing.IngredientID <= 0 {
+			return "", nil, errors.New("ingredient ingredient_id must be > 0")
 		}
 		if ing.Quantity <= 0 {
 			return "", nil, errors.New("ingredient quantity must be > 0")
@@ -126,7 +126,7 @@ func (h *Handler) CreateRecipe(w http.ResponseWriter, r *http.Request) {
 	for _, ing := range ingredients {
 		if _, err := q.AddRecipeIngredient(r.Context(), queries.AddRecipeIngredientParams{
 			RecipeID: recipe.ID,
-			FoodID:   ing.FoodID,
+			IngredientID:   ing.IngredientID,
 			Quantity: ing.Quantity,
 		}); err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
@@ -187,7 +187,7 @@ func (h *Handler) UpdateRecipe(w http.ResponseWriter, r *http.Request) {
 	for _, ing := range ingredients {
 		if _, err := q.AddRecipeIngredient(r.Context(), queries.AddRecipeIngredientParams{
 			RecipeID: id,
-			FoodID:   ing.FoodID,
+			IngredientID:   ing.IngredientID,
 			Quantity: ing.Quantity,
 		}); err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
@@ -272,16 +272,16 @@ func (h *Handler) LogRecipe(w http.ResponseWriter, r *http.Request) {
 	q := h.Q.WithTx(tx)
 	out := make([]queries.LogEntry, 0, len(ings))
 	for _, ing := range ings {
-		foodID := ing.FoodID
+		ingredientID := ing.IngredientID
 		recipeID := recipe.ID
 		recipeName := recipe.Name
 		qty := ing.Quantity * body.Servings
 		entry, err := q.AddLogEntry(r.Context(), queries.AddLogEntryParams{
 			UserID:               userID,
-			FoodID:               &foodID,
+			IngredientID:               &ingredientID,
 			Date:                 body.Date,
-			FoodName:             ing.FoodName,
-			FoodUnit:             ing.FoodUnit,
+			IngredientName:             ing.IngredientName,
+			IngredientUnit:             ing.IngredientUnit,
 			CaloriesPerUnit:      ing.CaloriesPerUnit,
 			ProteinPerUnit:       ing.ProteinPerUnit,
 			Quantity:             qty,

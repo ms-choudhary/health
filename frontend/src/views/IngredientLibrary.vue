@@ -2,41 +2,41 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/lib/api'
-import type { Food, RecipeListItem } from '@/lib/types'
+import type { Ingredient, RecipeListItem } from '@/lib/types'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Badge from '@/components/ui/Badge.vue'
-import FoodEditor from '@/components/FoodEditor.vue'
+import IngredientEditor from '@/components/IngredientEditor.vue'
 import RecipeEditor from '@/components/RecipeEditor.vue'
 import { ChevronLeft, Search, Trash2, Plus, Pencil } from 'lucide-vue-next'
 
-type Tab = 'foods' | 'recipes'
+type Tab = 'ingredients' | 'recipes'
 
 const router = useRouter()
-const tab = ref<Tab>('foods')
+const tab = ref<Tab>('ingredients')
 const query = ref<string>('')
 
-const foods = ref<Food[]>([])
-const loadingFoods = ref<boolean>(true)
+const ingredients = ref<Ingredient[]>([])
+const loadingIngredients = ref<boolean>(true)
 
 const recipes = ref<RecipeListItem[]>([])
 const loadingRecipes = ref<boolean>(true)
 
-const showFoodEditor = ref<boolean>(false)
-const editingFood = ref<Food | null>(null)
+const showIngredientEditor = ref<boolean>(false)
+const editingIngredient = ref<Ingredient | null>(null)
 
 const showRecipeEditor = ref<boolean>(false)
 const editingRecipeId = ref<number | null>(null)
 
 let searchTimer: number | undefined
 
-async function loadFoods(): Promise<void> {
-  loadingFoods.value = true
+async function loadIngredients(): Promise<void> {
+  loadingIngredients.value = true
   try {
-    foods.value = await api.listFoods(query.value)
+    ingredients.value = await api.listIngredients(query.value)
   } finally {
-    loadingFoods.value = false
+    loadingIngredients.value = false
   }
 }
 
@@ -50,7 +50,7 @@ async function loadRecipes(): Promise<void> {
 }
 
 async function loadCurrent(): Promise<void> {
-  if (tab.value === 'foods') await loadFoods()
+  if (tab.value === 'ingredients') await loadIngredients()
   else await loadRecipes()
 }
 
@@ -64,27 +64,27 @@ watch(tab, () => {
   void loadCurrent()
 })
 
-function openNewFood(): void {
-  editingFood.value = null
-  showFoodEditor.value = true
+function openNewIngredient(): void {
+  editingIngredient.value = null
+  showIngredientEditor.value = true
 }
 
-function openEditFood(food: Food): void {
-  editingFood.value = food
-  showFoodEditor.value = true
+function openEditIngredient(ingredient: Ingredient): void {
+  editingIngredient.value = ingredient
+  showIngredientEditor.value = true
 }
 
-function onFoodSaved(): void {
-  void loadFoods()
+function onIngredientSaved(): void {
+  void loadIngredients()
 }
 
-async function deleteFood(id: number): Promise<void> {
-  if (!confirm('Delete this food from the library?')) return
+async function deleteIngredient(id: number): Promise<void> {
+  if (!confirm('Delete this ingredient from the library?')) return
   try {
-    await api.deleteFood(id)
-    await loadFoods()
+    await api.deleteIngredient(id)
+    await loadIngredients()
   } catch (e) {
-    alert(e instanceof Error ? e.message : 'Cannot delete — food may be used by a recipe.')
+    alert(e instanceof Error ? e.message : 'Cannot delete — ingredient may be used by a recipe.')
   }
 }
 
@@ -119,11 +119,11 @@ onMounted(() => {
       <Button variant="ghost" size="icon" @click="router.push('/')">
         <ChevronLeft class="h-5 w-5" />
       </Button>
-      <h1 class="text-xl font-bold">Library</h1>
+      <h1 class="text-xl font-bold">Food Library</h1>
     </header>
 
     <div class="flex gap-2">
-      <Button :variant="tab === 'foods' ? 'default' : 'outline'" size="sm" @click="tab = 'foods'">
+      <Button :variant="tab === 'ingredients' ? 'default' : 'outline'" size="sm" @click="tab = 'ingredients'">
         Ingredients
       </Button>
       <Button :variant="tab === 'recipes' ? 'default' : 'outline'" size="sm" @click="tab = 'recipes'">
@@ -132,22 +132,22 @@ onMounted(() => {
     </div>
 
     <div class="relative">
-      <Input v-model="query" type="search" :placeholder="tab === 'foods' ? 'Search ingredients…' : 'Search recipes…'" />
+      <Input v-model="query" type="search" :placeholder="tab === 'ingredients' ? 'Search ingredients…' : 'Search recipes…'" />
       <Search class="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
     </div>
 
-    <template v-if="tab === 'foods'">
-      <div v-if="loadingFoods" class="flex flex-col gap-2">
+    <template v-if="tab === 'ingredients'">
+      <div v-if="loadingIngredients" class="flex flex-col gap-2">
         <div v-for="i in 4" :key="i" class="h-14 rounded-lg bg-muted animate-pulse" />
       </div>
 
-      <div v-else-if="foods.length === 0" class="text-center py-10 text-muted-foreground text-sm">
+      <div v-else-if="ingredients.length === 0" class="text-center py-10 text-muted-foreground text-sm">
         <template v-if="query">No ingredient matches "{{ query }}".</template>
         <template v-else>No ingredients yet — tap "Add ingredient" below.</template>
       </div>
 
       <div v-else class="flex flex-col gap-2">
-        <Card v-for="f in foods" :key="f.id">
+        <Card v-for="f in ingredients" :key="f.id">
           <div class="p-3 flex items-center gap-3">
             <div class="flex-1 min-w-0">
               <div class="font-medium truncate">{{ f.name }}</div>
@@ -156,17 +156,17 @@ onMounted(() => {
               </div>
             </div>
             <Badge variant="secondary">{{ f.unit }}</Badge>
-            <Button variant="ghost" size="icon" @click="openEditFood(f)">
+            <Button variant="ghost" size="icon" @click="openEditIngredient(f)">
               <Pencil class="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" @click="deleteFood(f.id)">
+            <Button variant="ghost" size="icon" @click="deleteIngredient(f.id)">
               <Trash2 class="h-4 w-4" />
             </Button>
           </div>
         </Card>
       </div>
 
-      <Button class="mt-2" @click="openNewFood">
+      <Button class="mt-2" @click="openNewIngredient">
         <Plus class="h-4 w-4" />
         Add ingredient
       </Button>
@@ -209,10 +209,10 @@ onMounted(() => {
     </template>
   </div>
 
-  <FoodEditor
-    v-model:open="showFoodEditor"
-    :food="editingFood"
-    @saved="onFoodSaved"
+  <IngredientEditor
+    v-model:open="showIngredientEditor"
+    :ingredient="editingIngredient"
+    @saved="onIngredientSaved"
   />
 
   <RecipeEditor
