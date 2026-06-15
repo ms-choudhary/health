@@ -1,7 +1,7 @@
--- name: GetLogForDate :many
+-- name: GetLogHistory :many
 SELECT * FROM log_entries
-WHERE user_id = ? AND date = ?
-ORDER BY id;
+WHERE user_id = ?
+ORDER BY date DESC, id;
 
 -- name: GetRecentLoggedRecipes :many
 SELECT

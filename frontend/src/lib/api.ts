@@ -70,8 +70,8 @@ export const api = {
   deleteIngredient: (id: number) =>
     request<void>(`${BASE}/ingredients/${id}`, { method: 'DELETE' }),
 
-  getLog: (userId: number, date: string) =>
-    request<LogEntry[]>(`${BASE}/users/${userId}/log?date=${date}`),
+  getLog: (userId: number) =>
+    request<LogEntry[]>(`${BASE}/users/${userId}/log`),
   deleteLog: (userId: number, entryId: number) =>
     request<void>(`${BASE}/users/${userId}/log/${entryId}`, { method: 'DELETE' }),
   recentRecipes: (userId: number) =>

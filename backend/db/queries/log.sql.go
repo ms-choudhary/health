@@ -103,19 +103,14 @@ func (q *Queries) DeleteLogEntry(ctx context.Context, arg DeleteLogEntryParams) 
 	return err
 }
 
-const getLogForDate = `-- name: GetLogForDate :many
+const getLogHistory = `-- name: GetLogHistory :many
 SELECT id, user_id, ingredient_id, date, ingredient_name, ingredient_unit, calories_per_unit, protein_per_unit, quantity, calories, protein, source_recipe_id, source_recipe_name, source_recipe_servings FROM log_entries
-WHERE user_id = ? AND date = ?
-ORDER BY id
+WHERE user_id = ?
+ORDER BY date DESC, id
 `
 
-type GetLogForDateParams struct {
-	UserID int64  `json:"user_id"`
-	Date   string `json:"date"`
-}
-
-func (q *Queries) GetLogForDate(ctx context.Context, arg GetLogForDateParams) ([]LogEntry, error) {
-	rows, err := q.db.QueryContext(ctx, getLogForDate, arg.UserID, arg.Date)
+func (q *Queries) GetLogHistory(ctx context.Context, userID int64) ([]LogEntry, error) {
+	rows, err := q.db.QueryContext(ctx, getLogHistory, userID)
 	if err != nil {
 		return nil, err
 	}

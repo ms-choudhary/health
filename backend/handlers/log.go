@@ -18,15 +18,7 @@ func (h *Handler) GetLog(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	date := r.URL.Query().Get("date")
-	if !validDate(date) {
-		writeError(w, http.StatusBadRequest, "date must be YYYY-MM-DD")
-		return
-	}
-	entries, err := h.Q.GetLogForDate(r.Context(), queries.GetLogForDateParams{
-		UserID: userID,
-		Date:   date,
-	})
+	entries, err := h.Q.GetLogHistory(r.Context(), userID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return

@@ -16,7 +16,7 @@ interface Picked {
   scale: string
 }
 
-const props = defineProps<{ userId: number; date: string }>()
+const props = defineProps<{ userId: number; date: string; initialRecipe?: RecipeListItem | null }>()
 const emit = defineEmits<{
   close: []
   added: [payload: { recipe_id: number }]
@@ -139,6 +139,15 @@ onMounted(() => {
     vv.addEventListener('resize', onViewportChange)
     vv.addEventListener('scroll', onViewportChange)
     onViewportChange()
+  }
+  if (props.initialRecipe) {
+    picked.value = {
+      recipe_id: props.initialRecipe.id,
+      recipe_name: props.initialRecipe.name,
+      total_calories: props.initialRecipe.total_calories,
+      total_protein: props.initialRecipe.total_protein,
+      scale: '1',
+    }
   }
   void loadRecent()
 })
