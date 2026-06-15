@@ -261,10 +261,10 @@ onMounted(() => {
 
     <template v-else>
       <template v-if="selectedFoodTag">
-        <Button variant="ghost" size="sm" class="self-start" @click="selectedFoodTag = null">
-          ← All tags
-        </Button>
-        <div class="text-sm font-medium">Recipes tagged “{{ selectedFoodTag.name }}”</div>
+        <div class="flex items-center justify-between">
+          <div class="text-sm font-medium">Recipes tagged "{{ selectedFoodTag.name }}"</div>
+          <Button variant="secondary" size="sm" @click="selectedFoodTag = null">← Back</Button>
+        </div>
         <div v-if="loadingTaggedRecipes" class="flex flex-col gap-2">
           <div v-for="i in 3" :key="i" class="h-14 rounded-lg bg-muted animate-pulse" />
         </div>
