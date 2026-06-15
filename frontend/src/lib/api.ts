@@ -17,6 +17,15 @@ import type {
   LogRecipePayload,
   FoodTag,
   FoodTagWithCount,
+  Exercise,
+  ExerciseTag,
+  ExerciseTagWithCount,
+  ExerciseWithTags,
+  ExerciseSet,
+  SetInput,
+  AddSetsPayload,
+  ExercisePayload,
+  ExerciseProgress,
 } from './types'
 
 const BASE = '/api'
@@ -129,4 +138,34 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ name }),
     }),
+
+  listExercises: (search = '') =>
+    request<ExerciseWithTags[]>(`${BASE}/exercises?q=${encodeURIComponent(search)}`),
+  getExercise: (id: number) => request<ExerciseWithTags>(`${BASE}/exercises/${id}`),
+  createExercise: (payload: ExercisePayload) =>
+    request<Exercise>(`${BASE}/exercises`, { method: 'POST', body: JSON.stringify(payload) }),
+  updateExercise: (id: number, payload: ExercisePayload) =>
+    request<Exercise>(`${BASE}/exercises/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteExercise: (id: number) =>
+    request<void>(`${BASE}/exercises/${id}`, { method: 'DELETE' }),
+
+  listExerciseTags: () => request<ExerciseTagWithCount[]>(`${BASE}/exercise-tags`),
+  createExerciseTag: (name: string) =>
+    request<ExerciseTag>(`${BASE}/exercise-tags`, { method: 'POST', body: JSON.stringify({ name }) }),
+  deleteExerciseTag: (id: number) =>
+    request<void>(`${BASE}/exercise-tags/${id}`, { method: 'DELETE' }),
+  exercisesByTag: (tagId: number) =>
+    request<ExerciseWithTags[]>(`${BASE}/exercise-tags/${tagId}/exercises`),
+
+  getSets: (userId: number) => request<ExerciseSet[]>(`${BASE}/users/${userId}/sets`),
+  lastSets: (userId: number, exerciseId: number) =>
+    request<SetInput[]>(`${BASE}/users/${userId}/exercises/${exerciseId}/last-sets`),
+  addSets: (userId: number, payload: AddSetsPayload) =>
+    request<ExerciseSet[]>(`${BASE}/users/${userId}/sets`, { method: 'POST', body: JSON.stringify(payload) }),
+  updateSet: (userId: number, setId: number, payload: SetInput) =>
+    request<ExerciseSet>(`${BASE}/users/${userId}/sets/${setId}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteSet: (userId: number, setId: number) =>
+    request<void>(`${BASE}/users/${userId}/sets/${setId}`, { method: 'DELETE' }),
+  exerciseProgress: (userId: number, from: string, to: string) =>
+    request<ExerciseProgress[]>(`${BASE}/users/${userId}/exercise-progress?from=${from}&to=${to}`),
 }

@@ -72,3 +72,37 @@ CREATE INDEX IF NOT EXISTS idx_log_source_recipe        ON log_entries(source_re
 CREATE INDEX IF NOT EXISTS idx_metrics_user_date        ON daily_metrics(user_id, date);
 CREATE INDEX IF NOT EXISTS idx_recipe_ingredients_recipe ON recipe_ingredients(recipe_id);
 CREATE INDEX IF NOT EXISTS idx_recipe_food_tags_food_tag ON recipe_food_tags(food_tag_id);
+
+CREATE TABLE IF NOT EXISTS exercises (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  name       TEXT NOT NULL,
+  notes      TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (date('now'))
+);
+
+CREATE TABLE IF NOT EXISTS exercise_tags (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  name       TEXT NOT NULL COLLATE NOCASE UNIQUE,
+  created_at TEXT NOT NULL DEFAULT (date('now'))
+);
+
+CREATE TABLE IF NOT EXISTS exercise_taggings (
+  exercise_id     INTEGER NOT NULL REFERENCES exercises(id)     ON DELETE CASCADE,
+  exercise_tag_id INTEGER NOT NULL REFERENCES exercise_tags(id) ON DELETE CASCADE,
+  PRIMARY KEY (exercise_id, exercise_tag_id)
+);
+
+CREATE TABLE IF NOT EXISTS exercise_sets (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id       INTEGER NOT NULL REFERENCES users(id)     ON DELETE CASCADE,
+  exercise_id   INTEGER          REFERENCES exercises(id) ON DELETE SET NULL,
+  exercise_name TEXT    NOT NULL,
+  date          TEXT    NOT NULL,
+  weight        REAL    NOT NULL DEFAULT 0,
+  reps          INTEGER NOT NULL DEFAULT 0,
+  unit          TEXT    NOT NULL DEFAULT 'kg'
+);
+
+CREATE INDEX IF NOT EXISTS idx_sets_user_date        ON exercise_sets(user_id, date);
+CREATE INDEX IF NOT EXISTS idx_sets_exercise         ON exercise_sets(exercise_id);
+CREATE INDEX IF NOT EXISTS idx_taggings_tag          ON exercise_taggings(exercise_tag_id);

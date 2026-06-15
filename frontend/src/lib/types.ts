@@ -141,3 +141,65 @@ export interface LogRecipePayload {
   servings: number
   date: string
 }
+
+export interface Exercise {
+  id: number
+  name: string
+  notes: string
+  created_at: string
+}
+
+export interface ExerciseTag {
+  id: number
+  name: string
+  created_at: string
+}
+
+export interface ExerciseTagWithCount extends ExerciseTag {
+  exercise_count: number
+}
+
+export interface ExerciseWithTags extends Exercise {
+  tags: ExerciseTag[]
+}
+
+export interface ExerciseSet {
+  id: number
+  user_id: number
+  exercise_id: number | null
+  exercise_name: string
+  date: string
+  weight: number
+  reps: number
+  unit: string
+}
+
+export interface SetInput {
+  weight: number
+  reps: number
+}
+
+export interface AddSetsPayload {
+  exercise_id: number
+  date: string
+  unit?: string
+  sets: SetInput[]
+}
+
+export interface ExercisePayload {
+  name: string
+  notes: string
+  exercise_tag_ids: number[]
+}
+
+export interface ProgressPoint {
+  date: string
+  total_volume: number
+  breakdown: string
+}
+
+export interface ExerciseProgress {
+  exercise_id: number | null
+  exercise_name: string
+  points: ProgressPoint[]
+}

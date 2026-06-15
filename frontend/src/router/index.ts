@@ -13,6 +13,11 @@ const routes: RouteRecordRaw[] = [
     name: 'library',
     component: () => import('@/views/IngredientLibrary.vue'),
   },
+  {
+    path: '/exercise-library',
+    name: 'exercise-library',
+    component: () => import('@/views/ExerciseLibrary.vue'),
+  },
 ]
 
 export const router = createRouter({

@@ -12,6 +12,35 @@ type DailyMetric struct {
 	Steps  *int64   `json:"steps"`
 }
 
+type Exercise struct {
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	Notes     string `json:"notes"`
+	CreatedAt string `json:"created_at"`
+}
+
+type ExerciseSet struct {
+	ID           int64   `json:"id"`
+	UserID       int64   `json:"user_id"`
+	ExerciseID   *int64  `json:"exercise_id"`
+	ExerciseName string  `json:"exercise_name"`
+	Date         string  `json:"date"`
+	Weight       float64 `json:"weight"`
+	Reps         int64   `json:"reps"`
+	Unit         string  `json:"unit"`
+}
+
+type ExerciseTag struct {
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	CreatedAt string `json:"created_at"`
+}
+
+type ExerciseTagging struct {
+	ExerciseID    int64 `json:"exercise_id"`
+	ExerciseTagID int64 `json:"exercise_tag_id"`
+}
+
 type FoodTag struct {
 	ID        int64  `json:"id"`
 	Name      string `json:"name"`

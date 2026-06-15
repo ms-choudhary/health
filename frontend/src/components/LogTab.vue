@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { format, parseISO } from 'date-fns'
 import { api } from '@/lib/api'
 import { formatNumber } from '@/lib/utils'
-import type { LogEntry } from '@/lib/types'
+import type { LogEntry, ExerciseSet } from '@/lib/types'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import AddRecipeDrawer from '@/components/AddRecipeDrawer.vue'
 import { Plus, Trash2 } from 'lucide-vue-next'
+
+type Sub = 'food' | 'exercises'
 
 interface RecipeGroup {
   recipeId: number
@@ -24,13 +26,25 @@ interface DayLog {
   totalCalories: number
   totalProtein: number
 }
+interface SetDay {
+  date: string
+  displayDate: string
+  rows: ExerciseSet[]
+}
 
 const props = defineProps<{ userId: number }>()
 
+
 const today = format(new Date(), 'yyyy-MM-dd')
+const sub = ref<Sub>('food')
+
 const entries = ref<LogEntry[]>([])
 const loadingLog = ref(false)
 const showDrawer = ref(false)
+
+const sets = ref<ExerciseSet[]>([])
+const loadingSets = ref(false)
+const setsLoaded = ref(false)
 
 const days = computed<DayLog[]>(() => {
   const byDate = new Map<string, DayLog>()
@@ -70,6 +84,25 @@ const days = computed<DayLog[]>(() => {
   return order.map((d) => byDate.get(d)!)
 })
 
+const setDays = computed<SetDay[]>(() => {
+  const byDate = new Map<string, ExerciseSet[]>()
+  const order: string[] = []
+  for (const s of sets.value) {
+    let arr = byDate.get(s.date)
+    if (!arr) {
+      arr = []
+      byDate.set(s.date, arr)
+      order.push(s.date)
+    }
+    arr.push(s)
+  }
+  return order.map((d) => ({
+    date: d,
+    displayDate: format(parseISO(d), 'MMMM d, yyyy'),
+    rows: byDate.get(d)!,
+  }))
+})
+
 async function loadLog(): Promise<void> {
   loadingLog.value = true
   try {
@@ -79,12 +112,28 @@ async function loadLog(): Promise<void> {
   }
 }
 
+async function loadSets(): Promise<void> {
+  loadingSets.value = true
+  try {
+    sets.value = await api.getSets(props.userId)
+    setsLoaded.value = true
+  } finally {
+    loadingSets.value = false
+  }
+}
+
 async function removeRecipeGroup(date: string, recipeId: number, name: string): Promise<void> {
-  if (!confirm(`Remove “${name}” from this day's log?`)) return
+  if (!confirm(`Remove "${name}" from this day's log?`)) return
   await api.deleteLogRecipeGroup(props.userId, date, recipeId)
   entries.value = entries.value.filter(
     (e) => !(e.date === date && e.source_recipe_id === recipeId),
   )
+}
+
+async function removeSet(id: number): Promise<void> {
+  if (!confirm('Delete this set?')) return
+  await api.deleteSet(props.userId, id)
+  sets.value = sets.value.filter((s) => s.id !== id)
 }
 
 function onAdded(): void {
@@ -92,90 +141,138 @@ function onAdded(): void {
   void loadLog()
 }
 
+watch(sub, (s) => {
+  if (s === 'exercises' && !setsLoaded.value) void loadSets()
+})
+
 onMounted(loadLog)
 </script>
 
 <template>
   <div class="flex flex-col gap-4">
     <div class="flex items-center justify-between">
-      <h2 class="text-xl font-bold">Logs</h2>
-      <Button size="sm" @click="showDrawer = true">
-        <Plus class="h-4 w-4" />
-        Create
+      <div class="flex gap-2">
+        <Button :variant="sub === 'food' ? 'default' : 'outline'" size="sm" @click="sub = 'food'">
+          Food
+        </Button>
+        <Button :variant="sub === 'exercises' ? 'default' : 'outline'" size="sm" @click="sub = 'exercises'">
+          Exercises
+        </Button>
+      </div>
+    </div>
+    <div class="flex justify-end">
+      <Button v-if="sub === 'food'" size="sm" @click="showDrawer = true">
+        <Plus class="h-2 w-2" />
+        Add
       </Button>
     </div>
 
-    <div v-if="loadingLog" class="flex flex-col gap-3">
-      <div v-for="i in 3" :key="i" class="h-32 rounded-xl bg-card animate-pulse" />
-    </div>
-    <div v-else-if="days.length === 0" class="text-center py-12 text-muted-foreground text-sm italic">
-      Nothing logged yet — tap “Create” to add a recipe.
-    </div>
+    <template v-if="sub === 'food'">
+      <div v-if="loadingLog" class="flex flex-col gap-3">
+        <div v-for="i in 3" :key="i" class="h-32 rounded-xl bg-card animate-pulse" />
+      </div>
+      <div v-else-if="days.length === 0" class="text-center py-12 text-muted-foreground text-sm italic">
+        Nothing logged yet — tap "Create" to add a recipe.
+      </div>
+
+      <template v-else>
+        <div v-for="day in days" :key="day.date" class="flex flex-col gap-2">
+          <div class="font-mono text-base font-semibold uppercase tracking-wide text-foreground">
+            {{ day.displayDate }}
+          </div>
+          <Card class="overflow-hidden">
+            <table class="w-full text-sm">
+              <thead class="text-xs text-muted-foreground">
+                <tr class="border-b border-border">
+                  <th class="text-left font-medium px-3 py-2">Item</th>
+                  <th class="text-right font-medium px-3 py-2 w-16">Qty</th>
+                  <th class="text-right font-medium px-3 py-2 w-16">Cal</th>
+                  <th class="text-right font-medium px-3 py-2 w-16">Prot</th>
+                  <th class="w-9" />
+                </tr>
+              </thead>
+              <tbody>
+                <template v-for="g in day.groups" :key="`r-${day.date}-${g.recipeId}`">
+                  <tr class="border-b border-border bg-muted/40">
+                    <td class="px-3 py-2">
+                      <div class="flex items-center gap-2">
+                        <span class="font-medium">{{ g.recipeName }}</span>
+                        <span class="text-[10px] uppercase tracking-wide text-muted-foreground rounded bg-muted px-1.5 py-0.5">
+                          Recipe
+                        </span>
+                      </div>
+                      <div v-if="g.servings != null" class="text-xs text-muted-foreground font-mono">
+                        {{ formatNumber(g.servings, g.servings % 1 ? 1 : 0) }}
+                        serving{{ g.servings === 1 ? '' : 's' }}
+                      </div>
+                    </td>
+                    <td class="text-right px-3 py-2 text-muted-foreground">—</td>
+                    <td class="text-right px-3 py-2 font-medium font-mono">{{ Math.round(g.totalCalories) }}</td>
+                    <td class="text-right px-3 py-2 font-medium font-mono">{{ formatNumber(g.totalProtein, 1) }}</td>
+                    <td class="px-1">
+                      <Button variant="ghost" size="icon" @click="removeRecipeGroup(day.date, g.recipeId, g.recipeName)">
+                        <Trash2 class="h-4 w-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                  <tr v-for="e in g.entries" :key="`re-${e.id}`" class="border-b border-border last:border-0">
+                    <td class="px-3 py-2 pl-6">
+                      <div class="text-muted-foreground">↳ {{ e.ingredient_name }}</div>
+                      <div class="text-xs text-muted-foreground">{{ e.ingredient_unit }}</div>
+                    </td>
+                    <td class="text-right px-3 py-2 text-muted-foreground font-mono">
+                      {{ formatNumber(e.quantity, e.quantity % 1 ? 1 : 0) }}
+                    </td>
+                    <td class="text-right px-3 py-2 text-muted-foreground font-mono">{{ Math.round(e.calories) }}</td>
+                    <td class="text-right px-3 py-2 text-muted-foreground font-mono">{{ formatNumber(e.protein, 1) }}</td>
+                    <td class="px-1" />
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+            <div class="px-3 py-3 border-t border-border flex justify-between font-semibold font-mono">
+              <span>Total</span>
+              <span>
+                <span class="text-primary">{{ formatNumber(Math.round(day.totalCalories)) }} kcal</span>
+                <span class="ml-3 text-muted-foreground">{{ formatNumber(day.totalProtein, 1) }} g</span>
+              </span>
+            </div>
+          </Card>
+        </div>
+      </template>
+    </template>
 
     <template v-else>
-      <div v-for="day in days" :key="day.date" class="flex flex-col gap-2">
-        <div class="font-mono text-lg font-semibold uppercase tracking-wide text-foreground">
-          {{ day.displayDate }}
-        </div>
-        <Card class="overflow-hidden">
-          <table class="w-full text-sm">
-            <thead class="text-xs text-muted-foreground">
-              <tr class="border-b border-border">
-                <th class="text-left font-medium px-3 py-2">Item</th>
-                <th class="text-right font-medium px-3 py-2 w-16">Qty</th>
-                <th class="text-right font-medium px-3 py-2 w-16">Cal</th>
-                <th class="text-right font-medium px-3 py-2 w-16">Prot</th>
-                <th class="w-9" />
-              </tr>
-            </thead>
-            <tbody>
-              <template v-for="g in day.groups" :key="`r-${day.date}-${g.recipeId}`">
-                <tr class="border-b border-border bg-muted/40">
-                  <td class="px-3 py-2">
-                    <div class="flex items-center gap-2">
-                      <span class="font-medium">{{ g.recipeName }}</span>
-                      <span class="text-[10px] uppercase tracking-wide text-muted-foreground rounded bg-muted px-1.5 py-0.5">
-                        Recipe
-                      </span>
-                    </div>
-                    <div v-if="g.servings != null" class="text-xs text-muted-foreground font-mono">
-                      {{ formatNumber(g.servings, g.servings % 1 ? 1 : 0) }}
-                      serving{{ g.servings === 1 ? '' : 's' }}
-                    </div>
-                  </td>
-                  <td class="text-right px-3 py-2 text-muted-foreground">—</td>
-                  <td class="text-right px-3 py-2 font-medium font-mono">{{ Math.round(g.totalCalories) }}</td>
-                  <td class="text-right px-3 py-2 font-medium font-mono">{{ formatNumber(g.totalProtein, 1) }}</td>
-                  <td class="px-1">
-                    <Button variant="ghost" size="icon" @click="removeRecipeGroup(day.date, g.recipeId, g.recipeName)">
-                      <Trash2 class="h-4 w-4" />
-                    </Button>
-                  </td>
-                </tr>
-                <tr v-for="e in g.entries" :key="`re-${e.id}`" class="border-b border-border last:border-0">
-                  <td class="px-3 py-2 pl-6">
-                    <div class="text-muted-foreground">↳ {{ e.ingredient_name }}</div>
-                    <div class="text-xs text-muted-foreground">{{ e.ingredient_unit }}</div>
-                  </td>
-                  <td class="text-right px-3 py-2 text-muted-foreground font-mono">
-                    {{ formatNumber(e.quantity, e.quantity % 1 ? 1 : 0) }}
-                  </td>
-                  <td class="text-right px-3 py-2 text-muted-foreground font-mono">{{ Math.round(e.calories) }}</td>
-                  <td class="text-right px-3 py-2 text-muted-foreground font-mono">{{ formatNumber(e.protein, 1) }}</td>
-                  <td class="px-1" />
-                </tr>
-              </template>
-            </tbody>
-          </table>
-          <div class="px-3 py-3 border-t border-border flex justify-between font-semibold font-mono">
-            <span>Total</span>
-            <span>
-              <span class="text-primary">{{ formatNumber(Math.round(day.totalCalories)) }} kcal</span>
-              <span class="ml-3 text-muted-foreground">{{ formatNumber(day.totalProtein, 1) }} g</span>
-            </span>
-          </div>
-        </Card>
+      <div v-if="loadingSets" class="flex flex-col gap-3">
+        <div v-for="i in 3" :key="i" class="h-16 rounded-xl bg-card animate-pulse" />
       </div>
+      <div v-else-if="setDays.length === 0" class="text-center py-12 text-muted-foreground text-sm italic">
+        No sets logged yet — add some from the Today tab.
+      </div>
+
+      <template v-else>
+        <div v-for="day in setDays" :key="day.date" class="flex flex-col gap-2">
+          <div class="font-mono text-lg font-semibold uppercase tracking-wide text-foreground">
+            {{ day.displayDate }}
+          </div>
+          <Card class="overflow-hidden">
+            <div
+              v-for="s in day.rows"
+              :key="s.id"
+              class="flex items-center gap-3 px-3 py-3 border-b border-border last:border-0"
+            >
+              <span class="flex-1 truncate text-sm font-medium">{{ s.exercise_name }}</span>
+              <span class="font-mono text-sm">
+                <span class="font-semibold text-primary">{{ s.weight }}</span><span class="text-[10px] text-muted-foreground ml-0.5">{{ s.unit }}</span>
+                <span class="text-muted-foreground"> × </span><span class="font-semibold">{{ s.reps }}</span>
+              </span>
+              <Button variant="ghost" size="icon" @click="removeSet(s.id)">
+                <Trash2 class="h-4 w-4" />
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </template>
     </template>
   </div>
 

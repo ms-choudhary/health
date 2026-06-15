@@ -11,7 +11,7 @@ import Input from '@/components/ui/Input.vue'
 import Dialog from '@/components/ui/Dialog.vue'
 import Avatar from '@/components/ui/Avatar.vue'
 import DonutChart from '@/components/DonutChart.vue'
-import { BookOpen, Plus, ChevronRight } from 'lucide-vue-next'
+import { BookOpen, Dumbbell, Plus, ChevronRight } from 'lucide-vue-next'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -92,10 +92,16 @@ onMounted(load)
   <div class="max-w-lg mx-auto p-4 sm:p-6 flex flex-col gap-4">
     <header class="flex items-center justify-between">
       <h1 class="text-2xl font-bold tracking-tight">Health Tracker</h1>
-      <Button variant="outline" size="sm" @click="router.push('/library')">
-        <BookOpen class="h-4 w-4" />
-        Food Library
-      </Button>
+      <div class="flex gap-2">
+        <Button variant="outline" size="sm" @click="router.push('/library')">
+          <BookOpen class="h-4 w-4" />
+          Food
+        </Button>
+        <Button variant="outline" size="sm" @click="router.push('/exercise-library')">
+          <Dumbbell class="h-4 w-4" />
+          Exercises
+        </Button>
+      </div>
     </header>
 
     <div v-if="loading" class="flex flex-col gap-3">

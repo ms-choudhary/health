@@ -165,6 +165,46 @@ func main() {
 		createdRecipes = append(createdRecipes, recipe)
 	}
 
+	type seedExercise struct {
+		name string
+		tags []string
+	}
+	demoExercises := []seedExercise{
+		{"Hack Squat", []string{"lower", "full body"}},
+		{"Lying Leg Curl", []string{"lower"}},
+		{"DB Lateral Raise", []string{"upper", "arms/delts"}},
+		{"EZ Bar Curl", []string{"arms/delts"}},
+		{"Incline Barbell Press", []string{"upper", "press"}},
+	}
+	exerciseTagByName := make(map[string]queries.ExerciseTag)
+	ensureExerciseTag := func(name string) queries.ExerciseTag {
+		if t, ok := exerciseTagByName[name]; ok {
+			return t
+		}
+		t, err := q.CreateExerciseTag(ctx, name)
+		if err != nil {
+			log.Fatal(err)
+		}
+		exerciseTagByName[name] = t
+		return t
+	}
+	createdExercises := make([]queries.Exercise, 0, len(demoExercises))
+	for _, de := range demoExercises {
+		exercise, err := q.CreateExercise(ctx, queries.CreateExerciseParams{Name: de.name})
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, tagName := range de.tags {
+			tag := ensureExerciseTag(tagName)
+			if err := q.AddExerciseTag(ctx, queries.AddExerciseTagParams{
+				ExerciseID: exercise.ID, ExerciseTagID: tag.ID,
+			}); err != nil {
+				log.Fatal(err)
+			}
+		}
+		createdExercises = append(createdExercises, exercise)
+	}
+
 	rng := rand.New(rand.NewSource(42))
 	today := time.Now().UTC()
 	for _, u := range createdUsers {
@@ -205,9 +245,28 @@ func main() {
 					}
 				}
 			}
+			if d%2 == 0 {
+				exercisesToday := 2 + rng.Intn(2)
+				for i := 0; i < exercisesToday; i++ {
+					exercise := createdExercises[rng.Intn(len(createdExercises))]
+					exID := exercise.ID
+					baseWeight := 20.0 + float64(rng.Intn(8))*2.5 + float64(13-d)*0.5
+					for set := 0; set < 3; set++ {
+						weight := baseWeight + float64(set)*2.5
+						reps := int64(6 + rng.Intn(7))
+						if _, err := q.AddSet(ctx, queries.AddSetParams{
+							UserID: u.ID, ExerciseID: &exID, ExerciseName: exercise.Name,
+							Date: date, Weight: weight, Reps: reps, Unit: "kg",
+						}); err != nil {
+							log.Fatal(err)
+						}
+					}
+				}
+			}
 		}
 	}
 
-	fmt.Printf("Seeded %d users, %d ingredients, %d recipes, %d food tags, ~14 days of log entries each.\n",
-		len(createdUsers), len(createdIngredients), len(createdRecipes), len(tagByName))
+	fmt.Printf("Seeded %d users, %d ingredients, %d recipes, %d food tags, %d exercises, %d exercise tags, ~14 days of log entries and sets each.\n",
+		len(createdUsers), len(createdIngredients), len(createdRecipes), len(tagByName),
+		len(createdExercises), len(exerciseTagByName))
 }

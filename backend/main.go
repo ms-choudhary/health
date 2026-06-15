@@ -67,6 +67,24 @@ func main() {
 	mux.HandleFunc("GET /api/users/{id}/metrics", h.GetMetrics)
 	mux.HandleFunc("PUT /api/users/{id}/metrics", h.UpsertMetrics)
 
+	mux.HandleFunc("GET /api/exercises", h.ListExercises)
+	mux.HandleFunc("POST /api/exercises", h.CreateExercise)
+	mux.HandleFunc("GET /api/exercises/{id}", h.GetExercise)
+	mux.HandleFunc("PUT /api/exercises/{id}", h.UpdateExercise)
+	mux.HandleFunc("DELETE /api/exercises/{id}", h.DeleteExercise)
+
+	mux.HandleFunc("GET /api/exercise-tags", h.ListExerciseTags)
+	mux.HandleFunc("POST /api/exercise-tags", h.CreateExerciseTag)
+	mux.HandleFunc("DELETE /api/exercise-tags/{id}", h.DeleteExerciseTag)
+	mux.HandleFunc("GET /api/exercise-tags/{id}/exercises", h.GetExercisesByTag)
+
+	mux.HandleFunc("GET /api/users/{id}/sets", h.GetSets)
+	mux.HandleFunc("POST /api/users/{id}/sets", h.AddSets)
+	mux.HandleFunc("PUT /api/users/{id}/sets/{sid}", h.UpdateSet)
+	mux.HandleFunc("DELETE /api/users/{id}/sets/{sid}", h.DeleteSet)
+	mux.HandleFunc("GET /api/users/{id}/exercises/{eid}/last-sets", h.GetLastSets)
+	mux.HandleFunc("GET /api/users/{id}/exercise-progress", h.GetExerciseProgress)
+
 	mux.HandleFunc("POST /api/ai/calorie-hint", h.CalorieHint)
 
 	distDir := "../frontend/dist"

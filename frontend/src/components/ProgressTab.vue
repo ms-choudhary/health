@@ -3,11 +3,13 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { format, subDays, subMonths, subYears } from 'date-fns'
 import { api } from '@/lib/api'
 import { useUserStore } from '@/stores/user'
-import type { DailyMetric } from '@/lib/types'
+import type { DailyMetric, ExerciseProgress } from '@/lib/types'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import ProgressCharts from '@/components/ProgressCharts.vue'
+import ExerciseProgressCharts from '@/components/ExerciseProgressCharts.vue'
+import { ChevronDown } from 'lucide-vue-next'
 
 type Period = 'w' | 'm' | 'yr'
 
@@ -28,6 +30,10 @@ let savingTargetProtein = false
 const period = ref<Period>('w')
 const metricsRange = ref<DailyMetric[]>([])
 const loadingCharts = ref(false)
+
+const showExercises = ref(false)
+const exerciseProgress = ref<ExerciseProgress[]>([])
+const loadingExerciseProgress = ref(false)
 
 function parseOptionalNumber(v: string): number | null {
   const t = v.trim()
@@ -63,6 +69,16 @@ async function loadCharts(): Promise<void> {
     metricsRange.value = await api.metricsRange(props.userId, from, to)
   } finally {
     loadingCharts.value = false
+  }
+}
+
+async function loadExerciseProgress(): Promise<void> {
+  loadingExerciseProgress.value = true
+  try {
+    const { from, to } = dateRangeForPeriod()
+    exerciseProgress.value = await api.exerciseProgress(props.userId, from, to)
+  } finally {
+    loadingExerciseProgress.value = false
   }
 }
 
@@ -121,13 +137,17 @@ async function saveTargetProtein(): Promise<void> {
   }
 }
 
-watch(period, loadCharts)
+watch(period, async () => {
+  await loadCharts()
+  await loadExerciseProgress()
+})
 watch(user, syncTargetFromUser, { immediate: true })
 
 onMounted(async () => {
   syncTargetFromUser()
   await loadToday()
   await loadCharts()
+  await loadExerciseProgress()
 })
 </script>
 
@@ -188,5 +208,22 @@ onMounted(async () => {
       :target="user?.target_calories ?? 0"
       :protein-target="user?.target_protein ?? 0"
     />
+
+    <Card>
+      <button
+        type="button"
+        class="w-full p-4 flex items-center justify-between"
+        @click="showExercises = !showExercises"
+      >
+        <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Exercises</span>
+        <ChevronDown class="h-4 w-4 text-muted-foreground transition-transform" :class="showExercises ? 'rotate-180' : ''" />
+      </button>
+      <div v-if="showExercises" class="px-4 pb-4">
+        <div v-if="loadingExerciseProgress" class="space-y-3">
+          <div v-for="i in 2" :key="i" class="h-40 rounded-lg bg-muted animate-pulse" />
+        </div>
+        <ExerciseProgressCharts v-else :data="exerciseProgress" />
+      </div>
+    </Card>
   </div>
 </template>
