@@ -177,7 +177,7 @@ onMounted(load)
           placeholder="Daily protein target"
           @keyup.enter="submitAdd"
         />
-        <p class="text-xs text-muted-foreground">Daily protein target (g) — 0 if not tracking</p>
+        <p class="text-xs text-muted-foreground">Daily protein target (g)</p>
       </div>
       <p v-if="errMsg" class="text-sm text-destructive">{{ errMsg }}</p>
       <div class="flex justify-end gap-2">
