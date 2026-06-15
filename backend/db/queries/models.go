@@ -12,6 +12,12 @@ type DailyMetric struct {
 	Steps  *int64   `json:"steps"`
 }
 
+type FoodTag struct {
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	CreatedAt string `json:"created_at"`
+}
+
 type Ingredient struct {
 	ID              int64   `json:"id"`
 	Name            string  `json:"name"`
@@ -42,6 +48,11 @@ type Recipe struct {
 	ID        int64  `json:"id"`
 	Name      string `json:"name"`
 	CreatedAt string `json:"created_at"`
+}
+
+type RecipeFoodTag struct {
+	RecipeID  int64 `json:"recipe_id"`
+	FoodTagID int64 `json:"food_tag_id"`
 }
 
 type RecipeIngredient struct {

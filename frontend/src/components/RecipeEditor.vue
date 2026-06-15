@@ -5,7 +5,8 @@ import { formatNumber } from '@/lib/utils'
 import type {
   Ingredient,
   RecipeWithIngredients,
-  RecipeIngredientInput,
+  RecipePayload,
+  FoodTag,
 } from '@/lib/types'
 import Dialog from '@/components/ui/Dialog.vue'
 import Button from '@/components/ui/Button.vue'
@@ -32,10 +33,22 @@ const name = ref<string>('')
 const ingredients = ref<DraftIngredient[]>([])
 const search = ref<string>('')
 const searchResults = ref<Ingredient[]>([])
+const availableFoodTags = ref<FoodTag[]>([])
+const selectedFoodTagIds = ref<number[]>([])
 const saving = ref<boolean>(false)
 const loading = ref<boolean>(false)
 const errMsg = ref<string>('')
 let searchTimer: number | undefined
+
+async function loadFoodTags(): Promise<void> {
+  availableFoodTags.value = await api.listFoodTags()
+}
+
+function toggleFoodTag(id: number): void {
+  const i = selectedFoodTagIds.value.indexOf(id)
+  if (i === -1) selectedFoodTagIds.value.push(id)
+  else selectedFoodTagIds.value.splice(i, 1)
+}
 
 const isEdit = computed<boolean>(() => props.recipeId != null)
 
@@ -70,6 +83,7 @@ function reset(): void {
   ingredients.value = []
   search.value = ''
   searchResults.value = []
+  selectedFoodTagIds.value = []
   errMsg.value = ''
 }
 
@@ -86,6 +100,7 @@ async function loadForEdit(id: number): Promise<void> {
       protein_per_unit: ing.protein_per_unit,
       quantity: String(ing.quantity),
     }))
+    selectedFoodTagIds.value = recipe.food_tags.map((t) => t.id)
   } catch (e) {
     errMsg.value = e instanceof Error ? e.message : 'Failed to load recipe'
   } finally {
@@ -98,6 +113,7 @@ watch(
   async (open) => {
     if (!open) return
     reset()
+    await loadFoodTags()
     if (props.recipeId != null) {
       await loadForEdit(props.recipeId)
     }
@@ -144,9 +160,10 @@ async function save(): Promise<void> {
     errMsg.value = 'Add at least one ingredient'
     return
   }
-  const payload: { name: string; ingredients: RecipeIngredientInput[] } = {
+  const payload: RecipePayload = {
     name: trimmedName,
     ingredients: [],
+    food_tag_ids: selectedFoodTagIds.value,
   }
   for (const ing of ingredients.value) {
     const qty = Number(ing.quantity)
@@ -174,8 +191,11 @@ async function save(): Promise<void> {
 }
 
 onMounted(() => {
-  if (props.open && props.recipeId != null) {
-    void loadForEdit(props.recipeId)
+  if (props.open) {
+    void loadFoodTags()
+    if (props.recipeId != null) {
+      void loadForEdit(props.recipeId)
+    }
   }
 })
 </script>
@@ -187,6 +207,29 @@ onMounted(() => {
       <div>
         <label class="text-xs text-muted-foreground">Recipe name</label>
         <Input v-model="name" placeholder="e.g. Mango Shake" />
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <div class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          Tags
+        </div>
+        <div v-if="availableFoodTags.length === 0" class="text-xs text-muted-foreground">
+          No tags yet — create them in the Library’s “Tags” tab first.
+        </div>
+        <div v-else class="flex flex-wrap gap-2">
+          <button
+            v-for="t in availableFoodTags"
+            :key="t.id"
+            type="button"
+            class="text-xs rounded-full border px-2.5 py-1 transition-colors"
+            :class="selectedFoodTagIds.includes(t.id)
+              ? 'bg-primary text-primary-foreground border-primary'
+              : 'border-border hover:bg-muted'"
+            @click="toggleFoodTag(t.id)"
+          >
+            {{ t.name }}
+          </button>
+        </div>
       </div>
 
       <div class="flex flex-col gap-2">

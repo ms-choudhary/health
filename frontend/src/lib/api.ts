@@ -15,6 +15,8 @@ import type {
   RecipeWithIngredients,
   RecipePayload,
   LogRecipePayload,
+  FoodTag,
+  FoodTagWithCount,
 } from './types'
 
 const BASE = '/api'
@@ -102,6 +104,17 @@ export const api = {
     }),
   deleteRecipe: (id: number) =>
     request<void>(`${BASE}/recipes/${id}`, { method: 'DELETE' }),
+
+  listFoodTags: () => request<FoodTagWithCount[]>(`${BASE}/food-tags`),
+  createFoodTag: (name: string) =>
+    request<FoodTag>(`${BASE}/food-tags`, {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
+  deleteFoodTag: (id: number) =>
+    request<void>(`${BASE}/food-tags/${id}`, { method: 'DELETE' }),
+  recipesByFoodTag: (foodTagId: number) =>
+    request<RecipeListItem[]>(`${BASE}/food-tags/${foodTagId}/recipes`),
 
   metricsRange: (userId: number, from: string, to: string) =>
     request<DailyMetric[]>(`${BASE}/users/${userId}/metrics?from=${from}&to=${to}`),

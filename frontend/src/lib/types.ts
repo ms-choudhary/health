@@ -88,6 +88,16 @@ export interface UpdateIngredientPayload {
   protein_per_unit: number
 }
 
+export interface FoodTag {
+  id: number
+  name: string
+  created_at: string
+}
+
+export interface FoodTagWithCount extends FoodTag {
+  recipe_count: number
+}
+
 export interface Recipe {
   id: number
   name: string
@@ -97,6 +107,7 @@ export interface Recipe {
 export interface RecipeListItem extends Recipe {
   total_calories: number
   total_protein: number
+  food_tags: FoodTag[]
 }
 
 export interface RecipeIngredient {
@@ -122,6 +133,7 @@ export interface RecipeIngredientInput {
 export interface RecipePayload {
   name: string
   ingredients: RecipeIngredientInput[]
+  food_tag_ids: number[]
 }
 
 export interface LogRecipePayload {

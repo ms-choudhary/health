@@ -81,6 +81,7 @@ func main() {
 	type seedRecipe struct {
 		name        string
 		ingredients []seedRecipeIngredient
+		tags        []string
 	}
 	demoRecipes := []seedRecipe{
 		{
@@ -90,6 +91,7 @@ func main() {
 				{"Almonds", 15},
 				{"Banana", 1},
 			},
+			tags: []string{"Breakfast", "Vegetarian"},
 		},
 		{
 			name: "Avocado Egg Bowl",
@@ -98,6 +100,7 @@ func main() {
 				{"Egg", 2},
 				{"Olive Oil", 5},
 			},
+			tags: []string{"Breakfast", "High Protein"},
 		},
 		{
 			name: "Chicken Rice Plate",
@@ -106,6 +109,7 @@ func main() {
 				{"Brown Rice", 180},
 				{"Olive Oil", 5},
 			},
+			tags: []string{"Lunch", "High Protein"},
 		},
 		{
 			name: "Oatmeal Breakfast",
@@ -114,7 +118,21 @@ func main() {
 				{"Banana", 1},
 				{"Almonds", 10},
 			},
+			tags: []string{"Breakfast", "Vegetarian"},
 		},
+	}
+
+	tagByName := make(map[string]queries.FoodTag)
+	ensureTag := func(name string) queries.FoodTag {
+		if t, ok := tagByName[name]; ok {
+			return t
+		}
+		t, err := q.CreateFoodTag(ctx, name)
+		if err != nil {
+			log.Fatal(err)
+		}
+		tagByName[name] = t
+		return t
 	}
 	createdRecipes := make([]queries.Recipe, 0, len(demoRecipes))
 	for _, dr := range demoRecipes {
@@ -131,6 +149,15 @@ func main() {
 				RecipeID: recipe.ID,
 				IngredientID:   ingredient.ID,
 				Quantity: ing.quantity,
+			}); err != nil {
+				log.Fatal(err)
+			}
+		}
+		for _, tagName := range dr.tags {
+			tag := ensureTag(tagName)
+			if err := q.AddRecipeFoodTag(ctx, queries.AddRecipeFoodTagParams{
+				RecipeID:  recipe.ID,
+				FoodTagID: tag.ID,
 			}); err != nil {
 				log.Fatal(err)
 			}
@@ -181,6 +208,6 @@ func main() {
 		}
 	}
 
-	fmt.Printf("Seeded %d users, %d ingredients, %d recipes, ~14 days of log entries each.\n",
-		len(createdUsers), len(createdIngredients), len(createdRecipes))
+	fmt.Printf("Seeded %d users, %d ingredients, %d recipes, %d food tags, ~14 days of log entries each.\n",
+		len(createdUsers), len(createdIngredients), len(createdRecipes), len(tagByName))
 }

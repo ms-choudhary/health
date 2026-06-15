@@ -2,16 +2,17 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/lib/api'
-import type { Ingredient, RecipeListItem } from '@/lib/types'
+import type { Ingredient, RecipeListItem, FoodTagWithCount } from '@/lib/types'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Badge from '@/components/ui/Badge.vue'
 import IngredientEditor from '@/components/IngredientEditor.vue'
 import RecipeEditor from '@/components/RecipeEditor.vue'
+import FoodTagEditor from '@/components/FoodTagEditor.vue'
 import { ChevronLeft, Search, Trash2, Plus, Pencil } from 'lucide-vue-next'
 
-type Tab = 'ingredients' | 'recipes'
+type Tab = 'ingredients' | 'recipes' | 'tags'
 
 const router = useRouter()
 const tab = ref<Tab>('ingredients')
@@ -22,6 +23,14 @@ const loadingIngredients = ref<boolean>(true)
 
 const recipes = ref<RecipeListItem[]>([])
 const loadingRecipes = ref<boolean>(true)
+
+const foodTags = ref<FoodTagWithCount[]>([])
+const loadingFoodTags = ref<boolean>(true)
+const showFoodTagEditor = ref<boolean>(false)
+
+const selectedFoodTag = ref<FoodTagWithCount | null>(null)
+const taggedRecipes = ref<RecipeListItem[]>([])
+const loadingTaggedRecipes = ref<boolean>(false)
 
 const showIngredientEditor = ref<boolean>(false)
 const editingIngredient = ref<Ingredient | null>(null)
@@ -49,9 +58,44 @@ async function loadRecipes(): Promise<void> {
   }
 }
 
+async function loadFoodTags(): Promise<void> {
+  loadingFoodTags.value = true
+  try {
+    foodTags.value = await api.listFoodTags()
+  } finally {
+    loadingFoodTags.value = false
+  }
+}
+
+function openNewFoodTag(): void {
+  showFoodTagEditor.value = true
+}
+
+function onFoodTagSaved(): void {
+  void loadFoodTags()
+}
+
+async function deleteFoodTag(id: number): Promise<void> {
+  if (!confirm('Delete this tag? It will be removed from all recipes.')) return
+  await api.deleteFoodTag(id)
+  if (selectedFoodTag.value?.id === id) selectedFoodTag.value = null
+  await loadFoodTags()
+}
+
+async function openFoodTag(t: FoodTagWithCount): Promise<void> {
+  selectedFoodTag.value = t
+  loadingTaggedRecipes.value = true
+  try {
+    taggedRecipes.value = await api.recipesByFoodTag(t.id)
+  } finally {
+    loadingTaggedRecipes.value = false
+  }
+}
+
 async function loadCurrent(): Promise<void> {
   if (tab.value === 'ingredients') await loadIngredients()
-  else await loadRecipes()
+  else if (tab.value === 'recipes') await loadRecipes()
+  else await loadFoodTags()
 }
 
 watch(query, () => {
@@ -61,6 +105,7 @@ watch(query, () => {
 
 watch(tab, () => {
   query.value = ''
+  selectedFoodTag.value = null
   void loadCurrent()
 })
 
@@ -129,9 +174,12 @@ onMounted(() => {
       <Button :variant="tab === 'recipes' ? 'default' : 'outline'" size="sm" @click="tab = 'recipes'">
         Recipes
       </Button>
+      <Button :variant="tab === 'tags' ? 'default' : 'outline'" size="sm" @click="tab = 'tags'">
+        Tags
+      </Button>
     </div>
 
-    <div class="relative">
+    <div v-if="tab !== 'tags'" class="relative">
       <Input v-model="query" type="search" :placeholder="tab === 'ingredients' ? 'Search ingredients…' : 'Search recipes…'" />
       <Search class="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
     </div>
@@ -172,7 +220,7 @@ onMounted(() => {
       </Button>
     </template>
 
-    <template v-else>
+    <template v-else-if="tab === 'recipes'">
       <div v-if="loadingRecipes" class="flex flex-col gap-2">
         <div v-for="i in 4" :key="i" class="h-14 rounded-lg bg-muted animate-pulse" />
       </div>
@@ -189,6 +237,9 @@ onMounted(() => {
               <div class="font-medium truncate">{{ r.name }}</div>
               <div class="text-xs text-muted-foreground">
                 {{ Math.round(r.total_calories) }} kcal · {{ Math.round(r.total_protein) }} g protein / serving
+              </div>
+              <div v-if="r.food_tags.length" class="mt-1 flex flex-wrap gap-1">
+                <Badge v-for="t in r.food_tags" :key="t.id" variant="outline">{{ t.name }}</Badge>
               </div>
             </div>
             <Badge variant="secondary">Recipe</Badge>
@@ -207,6 +258,60 @@ onMounted(() => {
         New recipe
       </Button>
     </template>
+
+    <template v-else>
+      <template v-if="selectedFoodTag">
+        <Button variant="ghost" size="sm" class="self-start" @click="selectedFoodTag = null">
+          ← All tags
+        </Button>
+        <div class="text-sm font-medium">Recipes tagged “{{ selectedFoodTag.name }}”</div>
+        <div v-if="loadingTaggedRecipes" class="flex flex-col gap-2">
+          <div v-for="i in 3" :key="i" class="h-14 rounded-lg bg-muted animate-pulse" />
+        </div>
+        <div v-else-if="taggedRecipes.length === 0" class="text-center py-10 text-muted-foreground text-sm">
+          No recipes have this tag yet.
+        </div>
+        <div v-else class="flex flex-col gap-2">
+          <Card v-for="r in taggedRecipes" :key="r.id">
+            <div class="p-3">
+              <div class="font-medium truncate">{{ r.name }}</div>
+              <div class="text-xs text-muted-foreground">
+                {{ Math.round(r.total_calories) }} kcal · {{ Math.round(r.total_protein) }} g protein / serving
+              </div>
+            </div>
+          </Card>
+        </div>
+      </template>
+
+      <template v-else>
+        <div v-if="loadingFoodTags" class="flex flex-col gap-2">
+          <div v-for="i in 4" :key="i" class="h-12 rounded-lg bg-muted animate-pulse" />
+        </div>
+        <div v-else-if="foodTags.length === 0" class="text-center py-10 text-muted-foreground text-sm">
+          No tags yet — tap "Add tag" below.
+        </div>
+        <div v-else class="flex flex-col gap-2">
+          <Card v-for="t in foodTags" :key="t.id">
+            <div class="p-3 flex items-center gap-3">
+              <button class="flex-1 min-w-0 text-left" @click="openFoodTag(t)">
+                <div class="font-medium truncate">{{ t.name }}</div>
+                <div class="text-xs text-muted-foreground">
+                  {{ t.recipe_count }} recipe{{ t.recipe_count === 1 ? '' : 's' }}
+                </div>
+              </button>
+              <Button variant="ghost" size="icon" @click="deleteFoodTag(t.id)">
+                <Trash2 class="h-4 w-4" />
+              </Button>
+            </div>
+          </Card>
+        </div>
+
+        <Button class="mt-2" @click="openNewFoodTag">
+          <Plus class="h-4 w-4" />
+          Add tag
+        </Button>
+      </template>
+    </template>
   </div>
 
   <IngredientEditor
@@ -219,5 +324,10 @@ onMounted(() => {
     v-model:open="showRecipeEditor"
     :recipe-id="editingRecipeId"
     @saved="onRecipeSaved"
+  />
+
+  <FoodTagEditor
+    v-model:open="showFoodTagEditor"
+    @saved="onFoodTagSaved"
   />
 </template>
