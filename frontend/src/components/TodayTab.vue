@@ -223,10 +223,10 @@ onMounted(loadTags)
   </div>
 
   <AddRecipeDrawer
-    v-if="showRecipeDrawer"
+    v-if="showRecipeDrawer && pickedRecipe"
     :user-id="userId"
     :date="today"
-    :initial-recipe="pickedRecipe"
+    :recipe="pickedRecipe"
     @close="showRecipeDrawer = false"
     @added="onRecipeAdded"
   />

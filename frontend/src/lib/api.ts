@@ -2,7 +2,6 @@ import type {
   User,
   Ingredient,
   LogEntry,
-  RecentItem,
   DailyMetric,
   MetricsUpdate,
   TodaySummary,
@@ -15,6 +14,7 @@ import type {
   RecipeWithIngredients,
   RecipePayload,
   LogRecipePayload,
+  LogCustomRecipePayload,
   FoodTag,
   FoodTagWithCount,
   Exercise,
@@ -83,11 +83,14 @@ export const api = {
     request<LogEntry[]>(`${BASE}/users/${userId}/log`),
   deleteLog: (userId: number, entryId: number) =>
     request<void>(`${BASE}/users/${userId}/log/${entryId}`, { method: 'DELETE' }),
-  recentRecipes: (userId: number) =>
-    request<RecentItem[]>(`${BASE}/users/${userId}/recent`),
 
   logRecipe: (userId: number, payload: LogRecipePayload) =>
     request<LogEntry[]>(`${BASE}/users/${userId}/log/recipe`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  logCustomRecipe: (userId: number, payload: LogCustomRecipePayload) =>
+    request<LogEntry[]>(`${BASE}/users/${userId}/log/custom-recipe`, {
       method: 'POST',
       body: JSON.stringify(payload),
     }),

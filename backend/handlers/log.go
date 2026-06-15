@@ -2,15 +2,12 @@ package handlers
 
 import (
 	"net/http"
-	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"health/db/queries"
 )
-
-const recentWindowDays = 7
-const recentItemsCap = 20
 
 func (h *Handler) GetLog(w http.ResponseWriter, r *http.Request) {
 	userID, err := parseID(r, "id")
@@ -62,7 +59,7 @@ func (h *Handler) DeleteLogEntriesByRecipe(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	srid, err := strconv.ParseInt(r.URL.Query().Get("source_recipe_id"), 10, 64)
-	if err != nil || srid <= 0 {
+	if err != nil || srid == 0 {
 		writeError(w, http.StatusBadRequest, "source_recipe_id required")
 		return
 	}
@@ -77,48 +74,98 @@ func (h *Handler) DeleteLogEntriesByRecipe(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNoContent)
 }
 
-type recentItem struct {
-	RecipeID      *int64  `json:"recipe_id"`
-	RecipeName    string  `json:"recipe_name"`
-	TotalCalories float64 `json:"total_calories"`
-	TotalProtein  float64 `json:"total_protein"`
-	LastServings  float64 `json:"last_servings"`
-	maxID         int64
+type customRecipeItem struct {
+	IngredientID    *int64  `json:"ingredient_id"`
+	IngredientName  string  `json:"ingredient_name"`
+	IngredientUnit  string  `json:"ingredient_unit"`
+	CaloriesPerUnit float64 `json:"calories_per_unit"`
+	ProteinPerUnit  float64 `json:"protein_per_unit"`
+	Quantity        float64 `json:"quantity"`
 }
 
-func (h *Handler) GetRecentRecipes(w http.ResponseWriter, r *http.Request) {
+type logCustomRecipeBody struct {
+	Name  string             `json:"name"`
+	Date  string             `json:"date"`
+	Items []customRecipeItem `json:"items"`
+}
+
+func (h *Handler) LogCustomRecipe(w http.ResponseWriter, r *http.Request) {
 	userID, err := parseID(r, "id")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	floor := time.Now().AddDate(0, 0, -recentWindowDays).Format("2006-01-02")
+	var body logCustomRecipeBody
+	if err := readJSON(r, &body); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 
-	recipes, err := h.Q.GetRecentLoggedRecipes(r.Context(), queries.GetRecentLoggedRecipesParams{
-		UserID:    userID,
-		DateFloor: floor,
-	})
+	name := strings.TrimSpace(body.Name)
+	if name == "" {
+		writeError(w, http.StatusBadRequest, "name required")
+		return
+	}
+	if !validDate(body.Date) {
+		writeError(w, http.StatusBadRequest, "date must be YYYY-MM-DD")
+		return
+	}
+	if len(body.Items) == 0 {
+		writeError(w, http.StatusBadRequest, "at least one ingredient required")
+		return
+	}
+	for _, it := range body.Items {
+		if strings.TrimSpace(it.IngredientName) == "" {
+			writeError(w, http.StatusBadRequest, "ingredient_name required")
+			return
+		}
+		if it.Quantity <= 0 {
+			writeError(w, http.StatusBadRequest, "quantity must be > 0")
+			return
+		}
+	}
+
+	// Synthetic, negative group id: unique per recipe, never collides with a real
+	// (positive auto-increment) recipe id, so a custom recipe can't merge with a real
+	// recipe group logged on the same day.
+	groupID := -time.Now().UnixNano()
+	groupName := name
+
+	tx, err := h.DB.BeginTx(r.Context(), nil)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	defer func() { _ = tx.Rollback() }()
+	q := h.Q.WithTx(tx)
 
-	items := make([]recentItem, 0, len(recipes))
-	for _, rec := range recipes {
-		rid := rec.RecipeID
-		items = append(items, recentItem{
-			RecipeID:      &rid,
-			RecipeName:    rec.RecipeName,
-			TotalCalories: rec.TotalCalories,
-			TotalProtein:  rec.TotalProtein,
-			LastServings:  rec.LastServings,
-			maxID:         rec.MaxID,
+	out := make([]queries.LogEntry, 0, len(body.Items))
+	for _, it := range body.Items {
+		entry, err := q.AddLogEntry(r.Context(), queries.AddLogEntryParams{
+			UserID:               userID,
+			IngredientID:         it.IngredientID,
+			Date:                 body.Date,
+			IngredientName:       it.IngredientName,
+			IngredientUnit:       it.IngredientUnit,
+			CaloriesPerUnit:      it.CaloriesPerUnit,
+			ProteinPerUnit:       it.ProteinPerUnit,
+			Quantity:             it.Quantity,
+			Calories:             it.CaloriesPerUnit * it.Quantity,
+			Protein:              it.ProteinPerUnit * it.Quantity,
+			SourceRecipeID:       &groupID,
+			SourceRecipeName:     &groupName,
+			SourceRecipeServings: nil,
 		})
-	}
-	sort.Slice(items, func(i, j int) bool { return items[i].maxID > items[j].maxID })
-	if len(items) > recentItemsCap {
-		items = items[:recentItemsCap]
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		out = append(out, entry)
 	}
 
-	writeJSON(w, http.StatusOK, items)
+	if err := tx.Commit(); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, out)
 }

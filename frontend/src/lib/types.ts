@@ -33,14 +33,6 @@ export interface LogEntry {
   source_recipe_servings: number | null
 }
 
-export interface RecentItem {
-  recipe_id: number
-  recipe_name: string
-  total_calories: number
-  total_protein: number
-  last_servings: number
-}
-
 export interface DailyMetric {
   id: number
   user_id: number
@@ -140,6 +132,21 @@ export interface LogRecipePayload {
   recipe_id: number
   servings: number
   date: string
+}
+
+export interface CustomRecipeItem {
+  ingredient_id: number | null
+  ingredient_name: string
+  ingredient_unit: string
+  calories_per_unit: number
+  protein_per_unit: number
+  quantity: number
+}
+
+export interface LogCustomRecipePayload {
+  name: string
+  date: string
+  items: CustomRecipeItem[]
 }
 
 export interface Exercise {

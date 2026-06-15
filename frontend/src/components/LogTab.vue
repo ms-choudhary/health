@@ -6,7 +6,7 @@ import { formatNumber } from '@/lib/utils'
 import type { LogEntry, ExerciseSet } from '@/lib/types'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
-import AddRecipeDrawer from '@/components/AddRecipeDrawer.vue'
+import CustomRecipeDrawer from '@/components/CustomRecipeDrawer.vue'
 import { Plus, Trash2 } from 'lucide-vue-next'
 
 type Sub = 'food' | 'exercises'
@@ -40,7 +40,7 @@ const sub = ref<Sub>('food')
 
 const entries = ref<LogEntry[]>([])
 const loadingLog = ref(false)
-const showDrawer = ref(false)
+const showCustom = ref(false)
 
 const sets = ref<ExerciseSet[]>([])
 const loadingSets = ref(false)
@@ -136,8 +136,8 @@ async function removeSet(id: number): Promise<void> {
   sets.value = sets.value.filter((s) => s.id !== id)
 }
 
-function onAdded(): void {
-  showDrawer.value = false
+function onCustomAdded(): void {
+  showCustom.value = false
   void loadLog()
 }
 
@@ -161,7 +161,7 @@ onMounted(loadLog)
       </div>
     </div>
     <div class="flex justify-end">
-      <Button v-if="sub === 'food'" size="sm" @click="showDrawer = true">
+      <Button v-if="sub === 'food'" size="sm" @click="showCustom = true">
         <Plus class="h-2 w-2" />
         Add
       </Button>
@@ -172,7 +172,7 @@ onMounted(loadLog)
         <div v-for="i in 3" :key="i" class="h-32 rounded-xl bg-card animate-pulse" />
       </div>
       <div v-else-if="days.length === 0" class="text-center py-12 text-muted-foreground text-sm italic">
-        Nothing logged yet — tap "Create" to add a recipe.
+        Nothing logged yet — tap "Add" to log a recipe.
       </div>
 
       <template v-else>
@@ -276,11 +276,11 @@ onMounted(loadLog)
     </template>
   </div>
 
-  <AddRecipeDrawer
-    v-if="showDrawer"
+  <CustomRecipeDrawer
+    v-if="showCustom"
     :user-id="userId"
     :date="today"
-    @close="showDrawer = false"
-    @added="onAdded"
+    @close="showCustom = false"
+    @added="onCustomAdded"
   />
 </template>
