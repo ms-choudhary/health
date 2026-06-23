@@ -1,6 +1,7 @@
 # Backend
 backend/health
 backend/health.db
+backend/health.db.*
 backend/health.db-*
 backend/*.exe
 
@@ -13,6 +14,10 @@ frontend/*.log
 # OS
 .DS_Store
 Thumbs.db
+
+# plan
+plan.md
+research.md
 
 # Editor
 .idea

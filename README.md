@@ -1,4 +1,4 @@
-# Health — multi-user calorie tracker
+# Health — multi-user tracker
 
 Vue 3 + shadcn-vue frontend, Go (`net/http`) + SQLite + sqlc backend.
 

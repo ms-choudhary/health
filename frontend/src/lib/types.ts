@@ -7,7 +7,7 @@ export interface User {
   created_at: string
 }
 
-export interface Food {
+export interface Ingredient {
   id: number
   name: string
   unit: string
@@ -19,38 +19,19 @@ export interface Food {
 export interface LogEntry {
   id: number
   user_id: number
-  food_id: number | null
+  ingredient_id: number | null
   date: string
-  food_name: string
-  food_unit: string
+  ingredient_name: string
+  ingredient_unit: string
   calories_per_unit: number
   protein_per_unit: number
   quantity: number
   calories: number
   protein: number
-  source_recipe_id: number | null
+  recipe_group_id: number | null
   source_recipe_name: string | null
   source_recipe_servings: number | null
 }
-
-export type RecentItem =
-  | {
-      kind: 'food'
-      food_id: number
-      food_name: string
-      food_unit: string
-      calories_per_unit: number
-      protein_per_unit: number
-      last_quantity: number
-    }
-  | {
-      kind: 'recipe'
-      recipe_id: number
-      recipe_name: string
-      total_calories: number
-      total_protein: number
-      last_servings: number
-    }
 
 export interface DailyMetric {
   id: number
@@ -87,22 +68,26 @@ export interface TodaySummary {
   target_protein: number
 }
 
-export interface AddLogPayload {
-  food_id: number
-  quantity: number
-  date: string
-}
-
-export interface CreateFoodPayload {
+export interface CreateIngredientPayload {
   name: string
   unit: string
   calories_per_unit: number
   protein_per_unit: number
 }
 
-export interface UpdateFoodPayload {
+export interface UpdateIngredientPayload {
   calories_per_unit: number
   protein_per_unit: number
+}
+
+export interface FoodTag {
+  id: number
+  name: string
+  created_at: string
+}
+
+export interface FoodTagWithCount extends FoodTag {
+  recipe_count: number
 }
 
 export interface Recipe {
@@ -114,15 +99,22 @@ export interface Recipe {
 export interface RecipeListItem extends Recipe {
   total_calories: number
   total_protein: number
+  food_tags: FoodTag[]
+}
+
+// Minimal recipe reference (id + name), e.g. recipes that use a given ingredient.
+export interface RecipeRef {
+  id: number
+  name: string
 }
 
 export interface RecipeIngredient {
   id: number
   recipe_id: number
-  food_id: number
+  ingredient_id: number
   quantity: number
-  food_name: string
-  food_unit: string
+  ingredient_name: string
+  ingredient_unit: string
   calories_per_unit: number
   protein_per_unit: number
 }
@@ -132,13 +124,14 @@ export interface RecipeWithIngredients extends RecipeListItem {
 }
 
 export interface RecipeIngredientInput {
-  food_id: number
+  ingredient_id: number
   quantity: number
 }
 
 export interface RecipePayload {
   name: string
   ingredients: RecipeIngredientInput[]
+  food_tag_ids: number[]
 }
 
 export interface LogRecipePayload {
@@ -147,6 +140,79 @@ export interface LogRecipePayload {
   date: string
 }
 
-export type Pickable =
-  | { kind: 'food'; food: Food }
-  | { kind: 'recipe'; recipe: RecipeListItem }
+export interface CustomRecipeItem {
+  ingredient_id: number | null
+  ingredient_name: string
+  ingredient_unit: string
+  calories_per_unit: number
+  protein_per_unit: number
+  quantity: number
+}
+
+export interface LogCustomRecipePayload {
+  name: string
+  date: string
+  items: CustomRecipeItem[]
+}
+
+export interface Exercise {
+  id: number
+  name: string
+  notes: string
+  created_at: string
+}
+
+export interface ExerciseTag {
+  id: number
+  name: string
+  created_at: string
+}
+
+export interface ExerciseTagWithCount extends ExerciseTag {
+  exercise_count: number
+}
+
+export interface ExerciseWithTags extends Exercise {
+  tags: ExerciseTag[]
+}
+
+export interface ExerciseSet {
+  id: number
+  user_id: number
+  exercise_id: number | null
+  exercise_name: string
+  date: string
+  weight: number
+  reps: number
+  unit: string
+}
+
+export interface SetInput {
+  weight: number
+  reps: number
+}
+
+export interface AddSetsPayload {
+  exercise_id: number
+  date: string
+  unit?: string
+  sets: SetInput[]
+}
+
+export interface ExercisePayload {
+  name: string
+  notes: string
+  exercise_tag_ids: number[]
+}
+
+export interface ProgressPoint {
+  date: string
+  total_volume: number
+  breakdown: string
+}
+
+export interface ExerciseProgress {
+  exercise_id: number | null
+  exercise_name: string
+  points: ProgressPoint[]
+}

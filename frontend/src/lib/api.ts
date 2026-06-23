@@ -1,21 +1,32 @@
 import type {
   User,
-  Food,
+  Ingredient,
   LogEntry,
-  RecentItem,
   DailyMetric,
   MetricsUpdate,
   TodaySummary,
-  AddLogPayload,
-  CreateFoodPayload,
-  UpdateFoodPayload,
+  CreateIngredientPayload,
+  UpdateIngredientPayload,
   CreateUserPayload,
   UpdateUserPayload,
   Recipe,
   RecipeListItem,
+  RecipeRef,
   RecipeWithIngredients,
   RecipePayload,
   LogRecipePayload,
+  LogCustomRecipePayload,
+  FoodTag,
+  FoodTagWithCount,
+  Exercise,
+  ExerciseTag,
+  ExerciseTagWithCount,
+  ExerciseWithTags,
+  ExerciseSet,
+  SetInput,
+  AddSetsPayload,
+  ExercisePayload,
+  ExerciseProgress,
 } from './types'
 
 const BASE = '/api'
@@ -57,38 +68,38 @@ export const api = {
   todaySummary: (userId: number) =>
     request<TodaySummary>(`${BASE}/users/${userId}/today`),
 
-  listFoods: (search = '') =>
-    request<Food[]>(`${BASE}/foods?q=${encodeURIComponent(search)}`),
-  createFood: (payload: CreateFoodPayload) =>
-    request<Food>(`${BASE}/foods`, { method: 'POST', body: JSON.stringify(payload) }),
-  updateFood: (id: number, payload: UpdateFoodPayload) =>
-    request<Food>(`${BASE}/foods/${id}`, {
+  listIngredients: (search = '') =>
+    request<Ingredient[]>(`${BASE}/ingredients?q=${encodeURIComponent(search)}`),
+  createIngredient: (payload: CreateIngredientPayload) =>
+    request<Ingredient>(`${BASE}/ingredients`, { method: 'POST', body: JSON.stringify(payload) }),
+  updateIngredient: (id: number, payload: UpdateIngredientPayload) =>
+    request<Ingredient>(`${BASE}/ingredients/${id}`, {
       method: 'PUT',
       body: JSON.stringify(payload),
     }),
-  deleteFood: (id: number) =>
-    request<void>(`${BASE}/foods/${id}`, { method: 'DELETE' }),
+  deleteIngredient: (id: number) =>
+    request<void>(`${BASE}/ingredients/${id}`, { method: 'DELETE' }),
+  recipesByIngredient: (id: number) =>
+    request<RecipeRef[]>(`${BASE}/ingredients/${id}/recipes`),
 
-  getLog: (userId: number, date: string) =>
-    request<LogEntry[]>(`${BASE}/users/${userId}/log?date=${date}`),
-  addLog: (userId: number, payload: AddLogPayload) =>
-    request<LogEntry>(`${BASE}/users/${userId}/log`, {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    }),
+  getLog: (userId: number) =>
+    request<LogEntry[]>(`${BASE}/users/${userId}/log`),
   deleteLog: (userId: number, entryId: number) =>
     request<void>(`${BASE}/users/${userId}/log/${entryId}`, { method: 'DELETE' }),
-  recentFoods: (userId: number) =>
-    request<RecentItem[]>(`${BASE}/users/${userId}/recent-foods`),
 
   logRecipe: (userId: number, payload: LogRecipePayload) =>
     request<LogEntry[]>(`${BASE}/users/${userId}/log/recipe`, {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
-  deleteLogRecipeGroup: (userId: number, date: string, sourceRecipeId: number) =>
+  logCustomRecipe: (userId: number, payload: LogCustomRecipePayload) =>
+    request<LogEntry[]>(`${BASE}/users/${userId}/log/custom-recipe`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  deleteLogRecipeGroup: (userId: number, date: string, recipeGroupId: number) =>
     request<void>(
-      `${BASE}/users/${userId}/log/recipe?date=${date}&source_recipe_id=${sourceRecipeId}`,
+      `${BASE}/users/${userId}/log/recipe?date=${date}&recipe_group_id=${recipeGroupId}`,
       { method: 'DELETE' },
     ),
 
@@ -109,6 +120,17 @@ export const api = {
   deleteRecipe: (id: number) =>
     request<void>(`${BASE}/recipes/${id}`, { method: 'DELETE' }),
 
+  listFoodTags: () => request<FoodTagWithCount[]>(`${BASE}/food-tags`),
+  createFoodTag: (name: string) =>
+    request<FoodTag>(`${BASE}/food-tags`, {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
+  deleteFoodTag: (id: number) =>
+    request<void>(`${BASE}/food-tags/${id}`, { method: 'DELETE' }),
+  recipesByFoodTag: (foodTagId: number) =>
+    request<RecipeListItem[]>(`${BASE}/food-tags/${foodTagId}/recipes`),
+
   metricsRange: (userId: number, from: string, to: string) =>
     request<DailyMetric[]>(`${BASE}/users/${userId}/metrics?from=${from}&to=${to}`),
   saveMetrics: (userId: number, payload: MetricsUpdate) =>
@@ -122,4 +144,34 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ name }),
     }),
+
+  listExercises: (search = '') =>
+    request<ExerciseWithTags[]>(`${BASE}/exercises?q=${encodeURIComponent(search)}`),
+  getExercise: (id: number) => request<ExerciseWithTags>(`${BASE}/exercises/${id}`),
+  createExercise: (payload: ExercisePayload) =>
+    request<Exercise>(`${BASE}/exercises`, { method: 'POST', body: JSON.stringify(payload) }),
+  updateExercise: (id: number, payload: ExercisePayload) =>
+    request<Exercise>(`${BASE}/exercises/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteExercise: (id: number) =>
+    request<void>(`${BASE}/exercises/${id}`, { method: 'DELETE' }),
+
+  listExerciseTags: () => request<ExerciseTagWithCount[]>(`${BASE}/exercise-tags`),
+  createExerciseTag: (name: string) =>
+    request<ExerciseTag>(`${BASE}/exercise-tags`, { method: 'POST', body: JSON.stringify({ name }) }),
+  deleteExerciseTag: (id: number) =>
+    request<void>(`${BASE}/exercise-tags/${id}`, { method: 'DELETE' }),
+  exercisesByTag: (tagId: number) =>
+    request<ExerciseWithTags[]>(`${BASE}/exercise-tags/${tagId}/exercises`),
+
+  getSets: (userId: number) => request<ExerciseSet[]>(`${BASE}/users/${userId}/sets`),
+  lastSets: (userId: number, exerciseId: number) =>
+    request<SetInput[]>(`${BASE}/users/${userId}/exercises/${exerciseId}/last-sets`),
+  addSets: (userId: number, payload: AddSetsPayload) =>
+    request<ExerciseSet[]>(`${BASE}/users/${userId}/sets`, { method: 'POST', body: JSON.stringify(payload) }),
+  updateSet: (userId: number, setId: number, payload: SetInput) =>
+    request<ExerciseSet>(`${BASE}/users/${userId}/sets/${setId}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteSet: (userId: number, setId: number) =>
+    request<void>(`${BASE}/users/${userId}/sets/${setId}`, { method: 'DELETE' }),
+  exerciseProgress: (userId: number, from: string, to: string) =>
+    request<ExerciseProgress[]>(`${BASE}/users/${userId}/exercise-progress?from=${from}&to=${to}`),
 }

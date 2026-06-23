@@ -10,24 +10,24 @@ import (
 )
 
 const addRecipeIngredient = `-- name: AddRecipeIngredient :one
-INSERT INTO recipe_ingredients (recipe_id, food_id, quantity)
+INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity)
 VALUES (?, ?, ?)
-RETURNING id, recipe_id, food_id, quantity
+RETURNING id, recipe_id, ingredient_id, quantity
 `
 
 type AddRecipeIngredientParams struct {
-	RecipeID int64   `json:"recipe_id"`
-	FoodID   int64   `json:"food_id"`
-	Quantity float64 `json:"quantity"`
+	RecipeID     int64   `json:"recipe_id"`
+	IngredientID int64   `json:"ingredient_id"`
+	Quantity     float64 `json:"quantity"`
 }
 
 func (q *Queries) AddRecipeIngredient(ctx context.Context, arg AddRecipeIngredientParams) (RecipeIngredient, error) {
-	row := q.db.QueryRowContext(ctx, addRecipeIngredient, arg.RecipeID, arg.FoodID, arg.Quantity)
+	row := q.db.QueryRowContext(ctx, addRecipeIngredient, arg.RecipeID, arg.IngredientID, arg.Quantity)
 	var i RecipeIngredient
 	err := row.Scan(
 		&i.ID,
 		&i.RecipeID,
-		&i.FoodID,
+		&i.IngredientID,
 		&i.Quantity,
 	)
 	return i, err
@@ -77,14 +77,14 @@ const getRecipeIngredients = `-- name: GetRecipeIngredients :many
 SELECT
   ri.id,
   ri.recipe_id,
-  ri.food_id,
+  ri.ingredient_id,
   ri.quantity,
-  f.name              AS food_name,
-  f.unit              AS food_unit,
+  f.name              AS ingredient_name,
+  f.unit              AS ingredient_unit,
   f.calories_per_unit AS calories_per_unit,
   f.protein_per_unit  AS protein_per_unit
 FROM recipe_ingredients ri
-JOIN foods f ON f.id = ri.food_id
+JOIN ingredients f ON f.id = ri.ingredient_id
 WHERE ri.recipe_id = ?
 ORDER BY ri.id
 `
@@ -92,10 +92,10 @@ ORDER BY ri.id
 type GetRecipeIngredientsRow struct {
 	ID              int64   `json:"id"`
 	RecipeID        int64   `json:"recipe_id"`
-	FoodID          int64   `json:"food_id"`
+	IngredientID    int64   `json:"ingredient_id"`
 	Quantity        float64 `json:"quantity"`
-	FoodName        string  `json:"food_name"`
-	FoodUnit        string  `json:"food_unit"`
+	IngredientName  string  `json:"ingredient_name"`
+	IngredientUnit  string  `json:"ingredient_unit"`
 	CaloriesPerUnit float64 `json:"calories_per_unit"`
 	ProteinPerUnit  float64 `json:"protein_per_unit"`
 }
@@ -112,13 +112,49 @@ func (q *Queries) GetRecipeIngredients(ctx context.Context, recipeID int64) ([]G
 		if err := rows.Scan(
 			&i.ID,
 			&i.RecipeID,
-			&i.FoodID,
+			&i.IngredientID,
 			&i.Quantity,
-			&i.FoodName,
-			&i.FoodUnit,
+			&i.IngredientName,
+			&i.IngredientUnit,
 			&i.CaloriesPerUnit,
 			&i.ProteinPerUnit,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getRecipesByIngredient = `-- name: GetRecipesByIngredient :many
+SELECT DISTINCT r.id, r.name
+FROM recipes r
+JOIN recipe_ingredients ri ON ri.recipe_id = r.id
+WHERE ri.ingredient_id = ?
+ORDER BY r.name
+`
+
+type GetRecipesByIngredientRow struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+}
+
+func (q *Queries) GetRecipesByIngredient(ctx context.Context, ingredientID int64) ([]GetRecipesByIngredientRow, error) {
+	rows, err := q.db.QueryContext(ctx, getRecipesByIngredient, ingredientID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetRecipesByIngredientRow
+	for rows.Next() {
+		var i GetRecipesByIngredientRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -141,7 +177,7 @@ SELECT
   CAST(COALESCE(SUM(f.protein_per_unit  * ri.quantity), 0) AS REAL) AS total_protein
 FROM recipes r
 LEFT JOIN recipe_ingredients ri ON ri.recipe_id = r.id
-LEFT JOIN foods f               ON f.id          = ri.food_id
+LEFT JOIN ingredients f               ON f.id          = ri.ingredient_id
 WHERE r.name LIKE '%' || ?1 || '%'
 GROUP BY r.id
 ORDER BY r.name

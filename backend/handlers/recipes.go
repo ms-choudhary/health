@@ -5,18 +5,20 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"health/db/queries"
 )
 
 type ingredientInput struct {
-	FoodID   int64   `json:"food_id"`
-	Quantity float64 `json:"quantity"`
+	IngredientID int64   `json:"ingredient_id"`
+	Quantity     float64 `json:"quantity"`
 }
 
 type recipeBody struct {
 	Name        string            `json:"name"`
 	Ingredients []ingredientInput `json:"ingredients"`
+	FoodTagIDs  []int64           `json:"food_tag_ids"`
 }
 
 type recipeDetailResponse struct {
@@ -26,25 +28,54 @@ type recipeDetailResponse struct {
 	TotalCalories float64                           `json:"total_calories"`
 	TotalProtein  float64                           `json:"total_protein"`
 	Ingredients   []queries.GetRecipeIngredientsRow `json:"ingredients"`
+	FoodTags      []queries.FoodTag                 `json:"food_tags"`
 }
 
-func validateRecipeBody(body recipeBody) (string, []ingredientInput, error) {
+func validateRecipeBody(body recipeBody) (string, []ingredientInput, []int64, error) {
 	name := strings.TrimSpace(body.Name)
 	if name == "" {
-		return "", nil, errors.New("name required")
+		return "", nil, nil, errors.New("name required")
 	}
 	if len(body.Ingredients) == 0 {
-		return "", nil, errors.New("at least one ingredient required")
+		return "", nil, nil, errors.New("at least one ingredient required")
 	}
 	for _, ing := range body.Ingredients {
-		if ing.FoodID <= 0 {
-			return "", nil, errors.New("ingredient food_id must be > 0")
+		if ing.IngredientID <= 0 {
+			return "", nil, nil, errors.New("ingredient ingredient_id must be > 0")
 		}
 		if ing.Quantity <= 0 {
-			return "", nil, errors.New("ingredient quantity must be > 0")
+			return "", nil, nil, errors.New("ingredient quantity must be > 0")
 		}
 	}
-	return name, body.Ingredients, nil
+	for _, id := range body.FoodTagIDs {
+		if id <= 0 {
+			return "", nil, nil, errors.New("food_tag_id must be > 0")
+		}
+	}
+	return name, body.Ingredients, body.FoodTagIDs, nil
+}
+
+func (h *Handler) applyRecipeFoodTags(w http.ResponseWriter, r *http.Request, q *queries.Queries, recipeID int64, foodTagIDs []int64) bool {
+	for _, tid := range foodTagIDs {
+		if _, err := q.GetFoodTag(r.Context(), tid); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				writeError(w, http.StatusBadRequest, "food tag not found — create it first")
+				return false
+			}
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return false
+		}
+		if err := q.AddRecipeFoodTag(r.Context(), queries.AddRecipeFoodTagParams{RecipeID: recipeID, FoodTagID: tid}); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return false
+		}
+	}
+	return true
+}
+
+type recipeListResponse struct {
+	queries.ListRecipesRow
+	FoodTags []queries.FoodTag `json:"food_tags"`
 }
 
 func (h *Handler) ListRecipes(w http.ResponseWriter, r *http.Request) {
@@ -54,10 +85,20 @@ func (h *Handler) ListRecipes(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if rows == nil {
-		rows = []queries.ListRecipesRow{}
+	tagsByRecipe, err := h.recipeFoodTagMap(r)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
 	}
-	writeJSON(w, http.StatusOK, rows)
+	out := make([]recipeListResponse, 0, len(rows))
+	for _, row := range rows {
+		tags := tagsByRecipe[row.ID]
+		if tags == nil {
+			tags = []queries.FoodTag{}
+		}
+		out = append(out, recipeListResponse{ListRecipesRow: row, FoodTags: tags})
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 func (h *Handler) GetRecipe(w http.ResponseWriter, r *http.Request) {
@@ -83,6 +124,14 @@ func (h *Handler) GetRecipe(w http.ResponseWriter, r *http.Request) {
 	if ings == nil {
 		ings = []queries.GetRecipeIngredientsRow{}
 	}
+	tags, err := h.Q.GetRecipeFoodTags(r.Context(), id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if tags == nil {
+		tags = []queries.FoodTag{}
+	}
 	var totalCal, totalProt float64
 	for _, ing := range ings {
 		totalCal += ing.CaloriesPerUnit * ing.Quantity
@@ -95,6 +144,7 @@ func (h *Handler) GetRecipe(w http.ResponseWriter, r *http.Request) {
 		TotalCalories: totalCal,
 		TotalProtein:  totalProt,
 		Ingredients:   ings,
+		FoodTags:      tags,
 	})
 }
 
@@ -104,7 +154,7 @@ func (h *Handler) CreateRecipe(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	name, ingredients, err := validateRecipeBody(body)
+	name, ingredients, foodTagIDs, err := validateRecipeBody(body)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -125,13 +175,16 @@ func (h *Handler) CreateRecipe(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, ing := range ingredients {
 		if _, err := q.AddRecipeIngredient(r.Context(), queries.AddRecipeIngredientParams{
-			RecipeID: recipe.ID,
-			FoodID:   ing.FoodID,
-			Quantity: ing.Quantity,
+			RecipeID:     recipe.ID,
+			IngredientID: ing.IngredientID,
+			Quantity:     ing.Quantity,
 		}); err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+	}
+	if !h.applyRecipeFoodTags(w, r, q, recipe.ID, foodTagIDs) {
+		return
 	}
 	if err := tx.Commit(); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -151,7 +204,7 @@ func (h *Handler) UpdateRecipe(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	name, ingredients, err := validateRecipeBody(body)
+	name, ingredients, foodTagIDs, err := validateRecipeBody(body)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -186,13 +239,20 @@ func (h *Handler) UpdateRecipe(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, ing := range ingredients {
 		if _, err := q.AddRecipeIngredient(r.Context(), queries.AddRecipeIngredientParams{
-			RecipeID: id,
-			FoodID:   ing.FoodID,
-			Quantity: ing.Quantity,
+			RecipeID:     id,
+			IngredientID: ing.IngredientID,
+			Quantity:     ing.Quantity,
 		}); err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+	}
+	if err := q.ClearRecipeFoodTags(r.Context(), id); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !h.applyRecipeFoodTags(w, r, q, id, foodTagIDs) {
+		return
 	}
 	if err := tx.Commit(); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -270,24 +330,28 @@ func (h *Handler) LogRecipe(w http.ResponseWriter, r *http.Request) {
 		_ = tx.Rollback()
 	}()
 	q := h.Q.WithTx(tx)
+	// Unique group id per log event (a unix millisecond timestamp) so logging the
+	// same recipe more than once on a day yields separate groups, each with its
+	// own serving count, rather than merging into one. Milliseconds keep the id
+	// within JavaScript's safe integer range (nanoseconds overflow it).
+	groupID := time.Now().UnixMilli()
+	recipeName := recipe.Name
 	out := make([]queries.LogEntry, 0, len(ings))
 	for _, ing := range ings {
-		foodID := ing.FoodID
-		recipeID := recipe.ID
-		recipeName := recipe.Name
+		ingredientID := ing.IngredientID
 		qty := ing.Quantity * body.Servings
 		entry, err := q.AddLogEntry(r.Context(), queries.AddLogEntryParams{
 			UserID:               userID,
-			FoodID:               &foodID,
+			IngredientID:         &ingredientID,
 			Date:                 body.Date,
-			FoodName:             ing.FoodName,
-			FoodUnit:             ing.FoodUnit,
+			IngredientName:       ing.IngredientName,
+			IngredientUnit:       ing.IngredientUnit,
 			CaloriesPerUnit:      ing.CaloriesPerUnit,
 			ProteinPerUnit:       ing.ProteinPerUnit,
 			Quantity:             qty,
 			Calories:             ing.CaloriesPerUnit * qty,
 			Protein:              ing.ProteinPerUnit * qty,
-			SourceRecipeID:       &recipeID,
+			RecipeGroupID:        &groupID,
 			SourceRecipeName:     &recipeName,
 			SourceRecipeServings: &body.Servings,
 		})

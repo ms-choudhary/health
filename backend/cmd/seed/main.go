@@ -12,7 +12,7 @@ import (
 	"health/db/queries"
 )
 
-type seedFood struct {
+type seedIngredient struct {
 	name    string
 	unit    string
 	cpu     float64
@@ -47,7 +47,7 @@ func main() {
 		createdUsers = append(createdUsers, row)
 	}
 
-	foods := []seedFood{
+	ingredients := []seedIngredient{
 		{"Oatmeal", "g", 3.9, 0.13},
 		{"Banana", "piece", 89, 1.1},
 		{"Grilled Chicken", "g", 1.65, 0.31},
@@ -59,19 +59,157 @@ func main() {
 		{"Avocado", "g", 1.6, 0.02},
 		{"Salmon", "g", 2.08, 0.20},
 	}
-	createdFoods := make([]queries.Food, 0, len(foods))
-	for _, f := range foods {
-		row, err := q.CreateFood(ctx, queries.CreateFoodParams{
+	createdIngredients := make([]queries.Ingredient, 0, len(ingredients))
+	for _, f := range ingredients {
+		row, err := q.CreateIngredient(ctx, queries.CreateIngredientParams{
 			Name: f.name, Unit: f.unit, CaloriesPerUnit: f.cpu, ProteinPerUnit: f.protein,
 		})
 		if err != nil {
 			log.Fatal(err)
 		}
-		createdFoods = append(createdFoods, row)
+		createdIngredients = append(createdIngredients, row)
+	}
+
+	ingredientByName := make(map[string]queries.Ingredient, len(createdIngredients))
+	for _, f := range createdIngredients {
+		ingredientByName[f.Name] = f
+	}
+	type seedRecipeIngredient struct {
+		ingredientName string
+		quantity       float64
+	}
+	type seedRecipe struct {
+		name        string
+		ingredients []seedRecipeIngredient
+		tags        []string
+	}
+	demoRecipes := []seedRecipe{
+		{
+			name: "Yogurt Parfait",
+			ingredients: []seedRecipeIngredient{
+				{"Greek Yogurt", 200},
+				{"Almonds", 15},
+				{"Banana", 1},
+			},
+			tags: []string{"Breakfast", "Vegetarian"},
+		},
+		{
+			name: "Avocado Egg Bowl",
+			ingredients: []seedRecipeIngredient{
+				{"Avocado", 100},
+				{"Egg", 2},
+				{"Olive Oil", 5},
+			},
+			tags: []string{"Breakfast", "High Protein"},
+		},
+		{
+			name: "Chicken Rice Plate",
+			ingredients: []seedRecipeIngredient{
+				{"Grilled Chicken", 150},
+				{"Brown Rice", 180},
+				{"Olive Oil", 5},
+			},
+			tags: []string{"Lunch", "High Protein"},
+		},
+		{
+			name: "Oatmeal Breakfast",
+			ingredients: []seedRecipeIngredient{
+				{"Oatmeal", 80},
+				{"Banana", 1},
+				{"Almonds", 10},
+			},
+			tags: []string{"Breakfast", "Vegetarian"},
+		},
+	}
+
+	tagByName := make(map[string]queries.FoodTag)
+	ensureTag := func(name string) queries.FoodTag {
+		if t, ok := tagByName[name]; ok {
+			return t
+		}
+		t, err := q.CreateFoodTag(ctx, name)
+		if err != nil {
+			log.Fatal(err)
+		}
+		tagByName[name] = t
+		return t
+	}
+	createdRecipes := make([]queries.Recipe, 0, len(demoRecipes))
+	for _, dr := range demoRecipes {
+		recipe, err := q.CreateRecipe(ctx, dr.name)
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, ing := range dr.ingredients {
+			ingredient, ok := ingredientByName[ing.ingredientName]
+			if !ok {
+				log.Fatalf("seed recipe ingredient %q not found", ing.ingredientName)
+			}
+			if _, err := q.AddRecipeIngredient(ctx, queries.AddRecipeIngredientParams{
+				RecipeID:     recipe.ID,
+				IngredientID: ingredient.ID,
+				Quantity:     ing.quantity,
+			}); err != nil {
+				log.Fatal(err)
+			}
+		}
+		for _, tagName := range dr.tags {
+			tag := ensureTag(tagName)
+			if err := q.AddRecipeFoodTag(ctx, queries.AddRecipeFoodTagParams{
+				RecipeID:  recipe.ID,
+				FoodTagID: tag.ID,
+			}); err != nil {
+				log.Fatal(err)
+			}
+		}
+		createdRecipes = append(createdRecipes, recipe)
+	}
+
+	type seedExercise struct {
+		name string
+		tags []string
+	}
+	demoExercises := []seedExercise{
+		{"Hack Squat", []string{"lower", "full body"}},
+		{"Lying Leg Curl", []string{"lower"}},
+		{"DB Lateral Raise", []string{"upper", "arms/delts"}},
+		{"EZ Bar Curl", []string{"arms/delts"}},
+		{"Incline Barbell Press", []string{"upper", "press"}},
+	}
+	exerciseTagByName := make(map[string]queries.ExerciseTag)
+	ensureExerciseTag := func(name string) queries.ExerciseTag {
+		if t, ok := exerciseTagByName[name]; ok {
+			return t
+		}
+		t, err := q.CreateExerciseTag(ctx, name)
+		if err != nil {
+			log.Fatal(err)
+		}
+		exerciseTagByName[name] = t
+		return t
+	}
+	createdExercises := make([]queries.Exercise, 0, len(demoExercises))
+	for _, de := range demoExercises {
+		exercise, err := q.CreateExercise(ctx, queries.CreateExerciseParams{Name: de.name})
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, tagName := range de.tags {
+			tag := ensureExerciseTag(tagName)
+			if err := q.AddExerciseTag(ctx, queries.AddExerciseTagParams{
+				ExerciseID: exercise.ID, ExerciseTagID: tag.ID,
+			}); err != nil {
+				log.Fatal(err)
+			}
+		}
+		createdExercises = append(createdExercises, exercise)
 	}
 
 	rng := rand.New(rand.NewSource(42))
 	today := time.Now().UTC()
+	// Monotonic, timestamp-like group id (unix millis, within JS safe-int range);
+	// one per logged recipe event so each renders as its own group.
+	groupSeq := today.UnixMilli()
 	for _, u := range createdUsers {
 		baseWeight := 70.0 + rng.Float64()*15
 		for d := 13; d >= 0; d-- {
@@ -84,80 +222,56 @@ func main() {
 			}); err != nil {
 				log.Fatal(err)
 			}
-			entriesPerDay := 3 + rng.Intn(3)
-			for i := 0; i < entriesPerDay; i++ {
-				f := createdFoods[rng.Intn(len(createdFoods))]
-				qty := 50 + rng.Float64()*200
-				if f.Unit == "piece" {
-					qty = float64(1 + rng.Intn(2))
-				}
-				if _, err := q.AddLogEntry(ctx, queries.AddLogEntryParams{
-					UserID: u.ID, FoodID: &f.ID, Date: date,
-					FoodName: f.Name, FoodUnit: f.Unit,
-					CaloriesPerUnit: f.CaloriesPerUnit,
-					ProteinPerUnit:  f.ProteinPerUnit,
-					Quantity:        qty,
-					Calories:        f.CaloriesPerUnit * qty,
-					Protein:         f.ProteinPerUnit * qty,
-				}); err != nil {
+			mealsPerDay := 2 + rng.Intn(2)
+			for i := 0; i < mealsPerDay; i++ {
+				recipe := createdRecipes[rng.Intn(len(createdRecipes))]
+				ings, err := q.GetRecipeIngredients(ctx, recipe.ID)
+				if err != nil {
 					log.Fatal(err)
 				}
+				if len(ings) == 0 {
+					continue
+				}
+				servings := 1.0 + float64(rng.Intn(2))
+				groupID := groupSeq
+				groupSeq++
+				rname := recipe.Name
+				for _, ing := range ings {
+					qty := ing.Quantity * servings
+					if _, err := q.AddLogEntry(ctx, queries.AddLogEntryParams{
+						UserID: u.ID, IngredientID: &ing.IngredientID, Date: date,
+						IngredientName: ing.IngredientName, IngredientUnit: ing.IngredientUnit,
+						CaloriesPerUnit: ing.CaloriesPerUnit, ProteinPerUnit: ing.ProteinPerUnit,
+						Quantity: qty,
+						Calories: ing.CaloriesPerUnit * qty, Protein: ing.ProteinPerUnit * qty,
+						RecipeGroupID: &groupID, SourceRecipeName: &rname, SourceRecipeServings: &servings,
+					}); err != nil {
+						log.Fatal(err)
+					}
+				}
+			}
+			if d%2 == 0 {
+				exercisesToday := 2 + rng.Intn(2)
+				for i := 0; i < exercisesToday; i++ {
+					exercise := createdExercises[rng.Intn(len(createdExercises))]
+					exID := exercise.ID
+					baseWeight := 20.0 + float64(rng.Intn(8))*2.5 + float64(13-d)*0.5
+					for set := 0; set < 3; set++ {
+						weight := baseWeight + float64(set)*2.5
+						reps := int64(6 + rng.Intn(7))
+						if _, err := q.AddSet(ctx, queries.AddSetParams{
+							UserID: u.ID, ExerciseID: &exID, ExerciseName: exercise.Name,
+							Date: date, Weight: weight, Reps: reps, Unit: "kg",
+						}); err != nil {
+							log.Fatal(err)
+						}
+					}
+				}
 			}
 		}
 	}
 
-	foodByName := make(map[string]queries.Food, len(createdFoods))
-	for _, f := range createdFoods {
-		foodByName[f.Name] = f
-	}
-	type seedRecipeIngredient struct {
-		foodName string
-		quantity float64
-	}
-	type seedRecipe struct {
-		name        string
-		ingredients []seedRecipeIngredient
-	}
-	demoRecipes := []seedRecipe{
-		{
-			name: "Yogurt Parfait",
-			ingredients: []seedRecipeIngredient{
-				{"Greek Yogurt", 200},
-				{"Almonds", 15},
-				{"Banana", 1},
-			},
-		},
-		{
-			name: "Avocado Egg Bowl",
-			ingredients: []seedRecipeIngredient{
-				{"Avocado", 100},
-				{"Egg", 2},
-				{"Olive Oil", 5},
-			},
-		},
-	}
-	createdRecipes := 0
-	for _, dr := range demoRecipes {
-		recipe, err := q.CreateRecipe(ctx, dr.name)
-		if err != nil {
-			log.Fatal(err)
-		}
-		for _, ing := range dr.ingredients {
-			food, ok := foodByName[ing.foodName]
-			if !ok {
-				log.Fatalf("seed recipe ingredient %q not found", ing.foodName)
-			}
-			if _, err := q.AddRecipeIngredient(ctx, queries.AddRecipeIngredientParams{
-				RecipeID: recipe.ID,
-				FoodID:   food.ID,
-				Quantity: ing.quantity,
-			}); err != nil {
-				log.Fatal(err)
-			}
-		}
-		createdRecipes++
-	}
-
-	fmt.Printf("Seeded %d users, %d foods, %d recipes, ~14 days of log entries each.\n",
-		len(createdUsers), len(createdFoods), createdRecipes)
+	fmt.Printf("Seeded %d users, %d ingredients, %d recipes, %d food tags, %d exercises, %d exercise tags, ~14 days of log entries and sets each.\n",
+		len(createdUsers), len(createdIngredients), len(createdRecipes), len(tagByName),
+		len(createdExercises), len(exerciseTagByName))
 }

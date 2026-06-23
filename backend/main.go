@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -42,17 +44,17 @@ func main() {
 	mux.HandleFunc("DELETE /api/users/{id}", h.DeleteUser)
 	mux.HandleFunc("GET /api/users/{id}/today", h.GetTodaySummary)
 
-	mux.HandleFunc("GET /api/foods", h.ListFoods)
-	mux.HandleFunc("POST /api/foods", h.CreateFood)
-	mux.HandleFunc("PUT /api/foods/{id}", h.UpdateFood)
-	mux.HandleFunc("DELETE /api/foods/{id}", h.DeleteFood)
+	mux.HandleFunc("GET /api/ingredients", h.ListIngredients)
+	mux.HandleFunc("POST /api/ingredients", h.CreateIngredient)
+	mux.HandleFunc("PUT /api/ingredients/{id}", h.UpdateIngredient)
+	mux.HandleFunc("DELETE /api/ingredients/{id}", h.DeleteIngredient)
+	mux.HandleFunc("GET /api/ingredients/{id}/recipes", h.GetRecipesByIngredient)
 
 	mux.HandleFunc("GET /api/users/{id}/log", h.GetLog)
-	mux.HandleFunc("POST /api/users/{id}/log", h.AddLogEntry)
-	mux.HandleFunc("DELETE /api/users/{id}/log/recipe", h.DeleteLogEntriesByRecipe)
+	mux.HandleFunc("DELETE /api/users/{id}/log/recipe", h.DeleteLogEntriesByGroup)
 	mux.HandleFunc("POST /api/users/{id}/log/recipe", h.LogRecipe)
+	mux.HandleFunc("POST /api/users/{id}/log/custom-recipe", h.LogCustomRecipe)
 	mux.HandleFunc("DELETE /api/users/{id}/log/{eid}", h.DeleteLogEntry)
-	mux.HandleFunc("GET /api/users/{id}/recent-foods", h.GetRecentFoods)
 
 	mux.HandleFunc("GET /api/recipes", h.ListRecipes)
 	mux.HandleFunc("POST /api/recipes", h.CreateRecipe)
@@ -60,8 +62,31 @@ func main() {
 	mux.HandleFunc("PUT /api/recipes/{id}", h.UpdateRecipe)
 	mux.HandleFunc("DELETE /api/recipes/{id}", h.DeleteRecipe)
 
+	mux.HandleFunc("GET /api/food-tags", h.ListFoodTags)
+	mux.HandleFunc("POST /api/food-tags", h.CreateFoodTag)
+	mux.HandleFunc("DELETE /api/food-tags/{id}", h.DeleteFoodTag)
+	mux.HandleFunc("GET /api/food-tags/{id}/recipes", h.GetRecipesByFoodTag)
+
 	mux.HandleFunc("GET /api/users/{id}/metrics", h.GetMetrics)
 	mux.HandleFunc("PUT /api/users/{id}/metrics", h.UpsertMetrics)
+
+	mux.HandleFunc("GET /api/exercises", h.ListExercises)
+	mux.HandleFunc("POST /api/exercises", h.CreateExercise)
+	mux.HandleFunc("GET /api/exercises/{id}", h.GetExercise)
+	mux.HandleFunc("PUT /api/exercises/{id}", h.UpdateExercise)
+	mux.HandleFunc("DELETE /api/exercises/{id}", h.DeleteExercise)
+
+	mux.HandleFunc("GET /api/exercise-tags", h.ListExerciseTags)
+	mux.HandleFunc("POST /api/exercise-tags", h.CreateExerciseTag)
+	mux.HandleFunc("DELETE /api/exercise-tags/{id}", h.DeleteExerciseTag)
+	mux.HandleFunc("GET /api/exercise-tags/{id}/exercises", h.GetExercisesByTag)
+
+	mux.HandleFunc("GET /api/users/{id}/sets", h.GetSets)
+	mux.HandleFunc("POST /api/users/{id}/sets", h.AddSets)
+	mux.HandleFunc("PUT /api/users/{id}/sets/{sid}", h.UpdateSet)
+	mux.HandleFunc("DELETE /api/users/{id}/sets/{sid}", h.DeleteSet)
+	mux.HandleFunc("GET /api/users/{id}/exercises/{eid}/last-sets", h.GetLastSets)
+	mux.HandleFunc("GET /api/users/{id}/exercise-progress", h.GetExerciseProgress)
 
 	mux.HandleFunc("POST /api/ai/calorie-hint", h.CalorieHint)
 
@@ -114,10 +139,55 @@ func cors(next http.Handler) http.Handler {
 	})
 }
 
+// respRecorder wraps http.ResponseWriter to capture the status code and, for
+// error responses, a copy of the response body so failures can be logged.
+type respRecorder struct {
+	http.ResponseWriter
+	status  int
+	capture bool
+	body    bytes.Buffer
+}
+
+func (rr *respRecorder) WriteHeader(code int) {
+	rr.status = code
+	rr.capture = code >= http.StatusBadRequest
+	rr.ResponseWriter.WriteHeader(code)
+}
+
+func (rr *respRecorder) Write(b []byte) (int, error) {
+	if rr.status == 0 {
+		rr.status = http.StatusOK
+	}
+	if rr.capture {
+		rr.body.Write(b)
+	}
+	return rr.ResponseWriter.Write(b)
+}
+
 func logRequest(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		next.ServeHTTP(w, r)
-		log.Printf("%s %s %s", r.Method, r.URL.Path, time.Since(start))
+		rec := &respRecorder{ResponseWriter: w}
+
+		defer func() {
+			if v := recover(); v != nil {
+				log.Printf("PANIC %s %s: %v\n%s", r.Method, r.URL.Path, v, debug.Stack())
+				if rec.status == 0 {
+					rec.ResponseWriter.Header().Set("Content-Type", "application/json")
+					rec.ResponseWriter.WriteHeader(http.StatusInternalServerError)
+					_, _ = rec.ResponseWriter.Write([]byte(`{"error":"internal server error"}`))
+				}
+			}
+		}()
+
+		next.ServeHTTP(rec, r)
+
+		dur := time.Since(start)
+		if rec.status >= http.StatusBadRequest {
+			log.Printf("ERROR %s %s -> %d (%s): %s",
+				r.Method, r.URL.Path, rec.status, dur, strings.TrimSpace(rec.body.String()))
+		} else {
+			log.Printf("%s %s %d %s", r.Method, r.URL.Path, rec.status, dur)
+		}
 	})
 }

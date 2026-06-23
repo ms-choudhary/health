@@ -11,7 +11,12 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/library',
     name: 'library',
-    component: () => import('@/views/FoodLibrary.vue'),
+    component: () => import('@/views/IngredientLibrary.vue'),
+  },
+  {
+    path: '/exercise-library',
+    name: 'exercise-library',
+    component: () => import('@/views/ExerciseLibrary.vue'),
   },
 ]
 

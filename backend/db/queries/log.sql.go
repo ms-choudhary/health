@@ -11,26 +11,26 @@ import (
 
 const addLogEntry = `-- name: AddLogEntry :one
 INSERT INTO log_entries
-  (user_id, food_id, date, food_name, food_unit,
+  (user_id, ingredient_id, date, ingredient_name, ingredient_unit,
    calories_per_unit, protein_per_unit,
    quantity, calories, protein,
-   source_recipe_id, source_recipe_name, source_recipe_servings)
+   recipe_group_id, source_recipe_name, source_recipe_servings)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, user_id, food_id, date, food_name, food_unit, calories_per_unit, protein_per_unit, quantity, calories, protein, source_recipe_id, source_recipe_name, source_recipe_servings
+RETURNING id, user_id, ingredient_id, date, ingredient_name, ingredient_unit, calories_per_unit, protein_per_unit, quantity, calories, protein, recipe_group_id, source_recipe_name, source_recipe_servings
 `
 
 type AddLogEntryParams struct {
 	UserID               int64    `json:"user_id"`
-	FoodID               *int64   `json:"food_id"`
+	IngredientID         *int64   `json:"ingredient_id"`
 	Date                 string   `json:"date"`
-	FoodName             string   `json:"food_name"`
-	FoodUnit             string   `json:"food_unit"`
+	IngredientName       string   `json:"ingredient_name"`
+	IngredientUnit       string   `json:"ingredient_unit"`
 	CaloriesPerUnit      float64  `json:"calories_per_unit"`
 	ProteinPerUnit       float64  `json:"protein_per_unit"`
 	Quantity             float64  `json:"quantity"`
 	Calories             float64  `json:"calories"`
 	Protein              float64  `json:"protein"`
-	SourceRecipeID       *int64   `json:"source_recipe_id"`
+	RecipeGroupID        *int64   `json:"recipe_group_id"`
 	SourceRecipeName     *string  `json:"source_recipe_name"`
 	SourceRecipeServings *float64 `json:"source_recipe_servings"`
 }
@@ -38,16 +38,16 @@ type AddLogEntryParams struct {
 func (q *Queries) AddLogEntry(ctx context.Context, arg AddLogEntryParams) (LogEntry, error) {
 	row := q.db.QueryRowContext(ctx, addLogEntry,
 		arg.UserID,
-		arg.FoodID,
+		arg.IngredientID,
 		arg.Date,
-		arg.FoodName,
-		arg.FoodUnit,
+		arg.IngredientName,
+		arg.IngredientUnit,
 		arg.CaloriesPerUnit,
 		arg.ProteinPerUnit,
 		arg.Quantity,
 		arg.Calories,
 		arg.Protein,
-		arg.SourceRecipeID,
+		arg.RecipeGroupID,
 		arg.SourceRecipeName,
 		arg.SourceRecipeServings,
 	)
@@ -55,38 +55,41 @@ func (q *Queries) AddLogEntry(ctx context.Context, arg AddLogEntryParams) (LogEn
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
-		&i.FoodID,
+		&i.IngredientID,
 		&i.Date,
-		&i.FoodName,
-		&i.FoodUnit,
+		&i.IngredientName,
+		&i.IngredientUnit,
 		&i.CaloriesPerUnit,
 		&i.ProteinPerUnit,
 		&i.Quantity,
 		&i.Calories,
 		&i.Protein,
-		&i.SourceRecipeID,
+		&i.RecipeGroupID,
 		&i.SourceRecipeName,
 		&i.SourceRecipeServings,
 	)
 	return i, err
 }
 
-const deleteLogEntriesByRecipe = `-- name: DeleteLogEntriesByRecipe :exec
+const deleteLogEntriesByGroup = `-- name: DeleteLogEntriesByGroup :execrows
 DELETE FROM log_entries
 WHERE user_id = ?1
   AND date    = ?2
-  AND source_recipe_id = ?3
+  AND recipe_group_id = ?3
 `
 
-type DeleteLogEntriesByRecipeParams struct {
-	UserID         int64  `json:"user_id"`
-	Date           string `json:"date"`
-	SourceRecipeID *int64 `json:"source_recipe_id"`
+type DeleteLogEntriesByGroupParams struct {
+	UserID        int64  `json:"user_id"`
+	Date          string `json:"date"`
+	RecipeGroupID *int64 `json:"recipe_group_id"`
 }
 
-func (q *Queries) DeleteLogEntriesByRecipe(ctx context.Context, arg DeleteLogEntriesByRecipeParams) error {
-	_, err := q.db.ExecContext(ctx, deleteLogEntriesByRecipe, arg.UserID, arg.Date, arg.SourceRecipeID)
-	return err
+func (q *Queries) DeleteLogEntriesByGroup(ctx context.Context, arg DeleteLogEntriesByGroupParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteLogEntriesByGroup, arg.UserID, arg.Date, arg.RecipeGroupID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const deleteLogEntry = `-- name: DeleteLogEntry :exec
@@ -103,19 +106,14 @@ func (q *Queries) DeleteLogEntry(ctx context.Context, arg DeleteLogEntryParams) 
 	return err
 }
 
-const getLogForDate = `-- name: GetLogForDate :many
-SELECT id, user_id, food_id, date, food_name, food_unit, calories_per_unit, protein_per_unit, quantity, calories, protein, source_recipe_id, source_recipe_name, source_recipe_servings FROM log_entries
-WHERE user_id = ? AND date = ?
-ORDER BY id
+const getLogHistory = `-- name: GetLogHistory :many
+SELECT id, user_id, ingredient_id, date, ingredient_name, ingredient_unit, calories_per_unit, protein_per_unit, quantity, calories, protein, recipe_group_id, source_recipe_name, source_recipe_servings FROM log_entries
+WHERE user_id = ?
+ORDER BY date DESC, id
 `
 
-type GetLogForDateParams struct {
-	UserID int64  `json:"user_id"`
-	Date   string `json:"date"`
-}
-
-func (q *Queries) GetLogForDate(ctx context.Context, arg GetLogForDateParams) ([]LogEntry, error) {
-	rows, err := q.db.QueryContext(ctx, getLogForDate, arg.UserID, arg.Date)
+func (q *Queries) GetLogHistory(ctx context.Context, userID int64) ([]LogEntry, error) {
+	rows, err := q.db.QueryContext(ctx, getLogHistory, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -126,156 +124,18 @@ func (q *Queries) GetLogForDate(ctx context.Context, arg GetLogForDateParams) ([
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
-			&i.FoodID,
+			&i.IngredientID,
 			&i.Date,
-			&i.FoodName,
-			&i.FoodUnit,
+			&i.IngredientName,
+			&i.IngredientUnit,
 			&i.CaloriesPerUnit,
 			&i.ProteinPerUnit,
 			&i.Quantity,
 			&i.Calories,
 			&i.Protein,
-			&i.SourceRecipeID,
+			&i.RecipeGroupID,
 			&i.SourceRecipeName,
 			&i.SourceRecipeServings,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getRecentLoggedFoods = `-- name: GetRecentLoggedFoods :many
-SELECT
-  le.food_id,
-  le.food_name,
-  le.food_unit,
-  le.calories_per_unit,
-  le.protein_per_unit,
-  le.quantity AS last_quantity,
-  latest.max_id AS max_id
-FROM log_entries le
-INNER JOIN (
-  SELECT inner_le.food_id AS fid, CAST(MAX(inner_le.id) AS INTEGER) AS max_id
-  FROM log_entries inner_le
-  WHERE inner_le.user_id          = ?1
-    AND inner_le.source_recipe_id IS NULL
-    AND inner_le.food_id          IS NOT NULL
-    AND inner_le.date             >= ?2
-  GROUP BY inner_le.food_id
-) latest ON le.id = latest.max_id
-ORDER BY le.id DESC
-LIMIT 50
-`
-
-type GetRecentLoggedFoodsParams struct {
-	UserID    int64  `json:"user_id"`
-	DateFloor string `json:"date_floor"`
-}
-
-type GetRecentLoggedFoodsRow struct {
-	FoodID          *int64  `json:"food_id"`
-	FoodName        string  `json:"food_name"`
-	FoodUnit        string  `json:"food_unit"`
-	CaloriesPerUnit float64 `json:"calories_per_unit"`
-	ProteinPerUnit  float64 `json:"protein_per_unit"`
-	LastQuantity    float64 `json:"last_quantity"`
-	MaxID           int64   `json:"max_id"`
-}
-
-func (q *Queries) GetRecentLoggedFoods(ctx context.Context, arg GetRecentLoggedFoodsParams) ([]GetRecentLoggedFoodsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getRecentLoggedFoods, arg.UserID, arg.DateFloor)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetRecentLoggedFoodsRow
-	for rows.Next() {
-		var i GetRecentLoggedFoodsRow
-		if err := rows.Scan(
-			&i.FoodID,
-			&i.FoodName,
-			&i.FoodUnit,
-			&i.CaloriesPerUnit,
-			&i.ProteinPerUnit,
-			&i.LastQuantity,
-			&i.MaxID,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getRecentLoggedRecipes = `-- name: GetRecentLoggedRecipes :many
-SELECT
-  r.id   AS recipe_id,
-  r.name AS recipe_name,
-  COALESCE(le.source_recipe_servings, 1) AS last_servings,
-  CAST(COALESCE(SUM(f.calories_per_unit * ri.quantity), 0) AS REAL) AS total_calories,
-  CAST(COALESCE(SUM(f.protein_per_unit  * ri.quantity), 0) AS REAL) AS total_protein,
-  latest.max_id AS max_id
-FROM (
-  SELECT inner_le.source_recipe_id AS rid, CAST(MAX(inner_le.id) AS INTEGER) AS max_id
-  FROM log_entries inner_le
-  WHERE inner_le.user_id          = ?1
-    AND inner_le.source_recipe_id IS NOT NULL
-    AND inner_le.date             >= ?2
-  GROUP BY inner_le.source_recipe_id
-) latest
-JOIN log_entries le ON le.id = latest.max_id
-JOIN recipes      r  ON r.id = latest.rid
-LEFT JOIN recipe_ingredients ri ON ri.recipe_id = r.id
-LEFT JOIN foods              f  ON f.id          = ri.food_id
-GROUP BY r.id, le.source_recipe_servings, latest.max_id
-ORDER BY latest.max_id DESC
-LIMIT 20
-`
-
-type GetRecentLoggedRecipesParams struct {
-	UserID    int64  `json:"user_id"`
-	DateFloor string `json:"date_floor"`
-}
-
-type GetRecentLoggedRecipesRow struct {
-	RecipeID      int64   `json:"recipe_id"`
-	RecipeName    string  `json:"recipe_name"`
-	LastServings  float64 `json:"last_servings"`
-	TotalCalories float64 `json:"total_calories"`
-	TotalProtein  float64 `json:"total_protein"`
-	MaxID         int64   `json:"max_id"`
-}
-
-func (q *Queries) GetRecentLoggedRecipes(ctx context.Context, arg GetRecentLoggedRecipesParams) ([]GetRecentLoggedRecipesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getRecentLoggedRecipes, arg.UserID, arg.DateFloor)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetRecentLoggedRecipesRow
-	for rows.Next() {
-		var i GetRecentLoggedRecipesRow
-		if err := rows.Scan(
-			&i.RecipeID,
-			&i.RecipeName,
-			&i.LastServings,
-			&i.TotalCalories,
-			&i.TotalProtein,
-			&i.MaxID,
 		); err != nil {
 			return nil, err
 		}

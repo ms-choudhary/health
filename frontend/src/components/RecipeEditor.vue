@@ -3,9 +3,10 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { api } from '@/lib/api'
 import { formatNumber } from '@/lib/utils'
 import type {
-  Food,
+  Ingredient,
   RecipeWithIngredients,
-  RecipeIngredientInput,
+  RecipePayload,
+  FoodTag,
 } from '@/lib/types'
 import Dialog from '@/components/ui/Dialog.vue'
 import Button from '@/components/ui/Button.vue'
@@ -14,9 +15,9 @@ import Badge from '@/components/ui/Badge.vue'
 import { Plus, Trash2, Search } from 'lucide-vue-next'
 
 interface DraftIngredient {
-  food_id: number
-  food_name: string
-  food_unit: string
+  ingredient_id: number
+  ingredient_name: string
+  ingredient_unit: string
   calories_per_unit: number
   protein_per_unit: number
   quantity: string
@@ -31,11 +32,23 @@ const emit = defineEmits<{
 const name = ref<string>('')
 const ingredients = ref<DraftIngredient[]>([])
 const search = ref<string>('')
-const searchResults = ref<Food[]>([])
+const searchResults = ref<Ingredient[]>([])
+const availableFoodTags = ref<FoodTag[]>([])
+const selectedFoodTagIds = ref<number[]>([])
 const saving = ref<boolean>(false)
 const loading = ref<boolean>(false)
 const errMsg = ref<string>('')
 let searchTimer: number | undefined
+
+async function loadFoodTags(): Promise<void> {
+  availableFoodTags.value = await api.listFoodTags()
+}
+
+function toggleFoodTag(id: number): void {
+  const i = selectedFoodTagIds.value.indexOf(id)
+  if (i === -1) selectedFoodTagIds.value.push(id)
+  else selectedFoodTagIds.value.splice(i, 1)
+}
 
 const isEdit = computed<boolean>(() => props.recipeId != null)
 
@@ -70,6 +83,7 @@ function reset(): void {
   ingredients.value = []
   search.value = ''
   searchResults.value = []
+  selectedFoodTagIds.value = []
   errMsg.value = ''
 }
 
@@ -79,13 +93,14 @@ async function loadForEdit(id: number): Promise<void> {
     const recipe: RecipeWithIngredients = await api.getRecipe(id)
     name.value = recipe.name
     ingredients.value = recipe.ingredients.map((ing) => ({
-      food_id: ing.food_id,
-      food_name: ing.food_name,
-      food_unit: ing.food_unit,
+      ingredient_id: ing.ingredient_id,
+      ingredient_name: ing.ingredient_name,
+      ingredient_unit: ing.ingredient_unit,
       calories_per_unit: ing.calories_per_unit,
       protein_per_unit: ing.protein_per_unit,
       quantity: String(ing.quantity),
     }))
+    selectedFoodTagIds.value = recipe.food_tags.map((t) => t.id)
   } catch (e) {
     errMsg.value = e instanceof Error ? e.message : 'Failed to load recipe'
   } finally {
@@ -98,6 +113,7 @@ watch(
   async (open) => {
     if (!open) return
     reset()
+    await loadFoodTags()
     if (props.recipeId != null) {
       await loadForEdit(props.recipeId)
     }
@@ -112,26 +128,26 @@ watch(search, (v) => {
     return
   }
   searchTimer = window.setTimeout(async () => {
-    searchResults.value = await api.listFoods(trimmed)
+    searchResults.value = await api.listIngredients(trimmed)
   }, 200)
 })
 
-function addIngredient(food: Food): void {
-  if (ingredients.value.some((i) => i.food_id === food.id)) return
+function addIngredient(ingredient: Ingredient): void {
+  if (ingredients.value.some((i) => i.ingredient_id === ingredient.id)) return
   ingredients.value.push({
-    food_id: food.id,
-    food_name: food.name,
-    food_unit: food.unit,
-    calories_per_unit: food.calories_per_unit,
-    protein_per_unit: food.protein_per_unit,
+    ingredient_id: ingredient.id,
+    ingredient_name: ingredient.name,
+    ingredient_unit: ingredient.unit,
+    calories_per_unit: ingredient.calories_per_unit,
+    protein_per_unit: ingredient.protein_per_unit,
     quantity: '1',
   })
   search.value = ''
   searchResults.value = []
 }
 
-function removeIngredient(foodId: number): void {
-  ingredients.value = ingredients.value.filter((i) => i.food_id !== foodId)
+function removeIngredient(ingredientId: number): void {
+  ingredients.value = ingredients.value.filter((i) => i.ingredient_id !== ingredientId)
 }
 
 async function save(): Promise<void> {
@@ -144,17 +160,18 @@ async function save(): Promise<void> {
     errMsg.value = 'Add at least one ingredient'
     return
   }
-  const payload: { name: string; ingredients: RecipeIngredientInput[] } = {
+  const payload: RecipePayload = {
     name: trimmedName,
     ingredients: [],
+    food_tag_ids: selectedFoodTagIds.value,
   }
   for (const ing of ingredients.value) {
     const qty = Number(ing.quantity)
     if (!Number.isFinite(qty) || qty <= 0) {
-      errMsg.value = `Quantity for ${ing.food_name} must be > 0`
+      errMsg.value = `Quantity for ${ing.ingredient_name} must be > 0`
       return
     }
-    payload.ingredients.push({ food_id: ing.food_id, quantity: qty })
+    payload.ingredients.push({ ingredient_id: ing.ingredient_id, quantity: qty })
   }
   saving.value = true
   errMsg.value = ''
@@ -174,8 +191,11 @@ async function save(): Promise<void> {
 }
 
 onMounted(() => {
-  if (props.open && props.recipeId != null) {
-    void loadForEdit(props.recipeId)
+  if (props.open) {
+    void loadFoodTags()
+    if (props.recipeId != null) {
+      void loadForEdit(props.recipeId)
+    }
   }
 })
 </script>
@@ -191,20 +211,43 @@ onMounted(() => {
 
       <div class="flex flex-col gap-2">
         <div class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          Tags
+        </div>
+        <div v-if="availableFoodTags.length === 0" class="text-xs text-muted-foreground">
+          No tags yet — create them in the Library’s “Tags” tab first.
+        </div>
+        <div v-else class="flex flex-wrap gap-2">
+          <button
+            v-for="t in availableFoodTags"
+            :key="t.id"
+            type="button"
+            class="text-xs rounded-full border px-2.5 py-1 transition-colors"
+            :class="selectedFoodTagIds.includes(t.id)
+              ? 'bg-primary text-primary-foreground border-primary'
+              : 'border-border hover:bg-muted'"
+            @click="toggleFoodTag(t.id)"
+          >
+            {{ t.name }}
+          </button>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <div class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
           Ingredients
         </div>
         <div v-if="ingredients.length === 0" class="text-xs text-muted-foreground">
-          Add ingredients by searching the food library below.
+          Add ingredients by searching the ingredient library below.
         </div>
         <div
           v-for="ing in ingredients"
-          :key="ing.food_id"
+          :key="ing.ingredient_id"
           class="flex items-center gap-2 rounded-md border border-border p-2"
         >
           <div class="flex-1 min-w-0">
-            <div class="text-sm font-medium truncate">{{ ing.food_name }}</div>
+            <div class="text-sm font-medium truncate">{{ ing.ingredient_name }}</div>
             <div class="text-xs text-muted-foreground">
-              {{ ing.calories_per_unit }} kcal · {{ ing.protein_per_unit }} g protein / 1 {{ ing.food_unit }}
+              {{ ing.calories_per_unit }} kcal · {{ ing.protein_per_unit }} g protein / 1 {{ ing.ingredient_unit }}
             </div>
           </div>
           <Input
@@ -215,8 +258,8 @@ onMounted(() => {
             step="0.1"
             class="!w-20"
           />
-          <span class="text-xs text-muted-foreground w-10">{{ ing.food_unit }}</span>
-          <Button variant="ghost" size="icon" @click="removeIngredient(ing.food_id)">
+          <span class="text-xs text-muted-foreground w-10">{{ ing.ingredient_unit }}</span>
+          <Button variant="ghost" size="icon" @click="removeIngredient(ing.ingredient_id)">
             <Trash2 class="h-4 w-4" />
           </Button>
         </div>
@@ -224,23 +267,23 @@ onMounted(() => {
 
       <div class="flex flex-col gap-2">
         <div class="relative">
-          <Input v-model="search" type="search" placeholder="Search food to add…" />
+          <Input v-model="search" type="search" placeholder="Search ingredient to add…" />
           <Search
             class="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none"
           />
         </div>
         <div v-if="searchResults.length > 0" class="flex flex-col gap-1 max-h-48 overflow-y-auto">
           <button
-            v-for="food in searchResults"
-            :key="food.id"
+            v-for="ingredient in searchResults"
+            :key="ingredient.id"
             type="button"
             class="text-left p-2 rounded-md border border-border hover:bg-muted transition-colors flex items-center justify-between gap-2"
-            @click="addIngredient(food)"
+            @click="addIngredient(ingredient)"
           >
             <div class="min-w-0">
-              <div class="text-sm font-medium truncate">{{ food.name }}</div>
+              <div class="text-sm font-medium truncate">{{ ingredient.name }}</div>
               <div class="text-xs text-muted-foreground">
-                {{ food.calories_per_unit }} kcal · {{ food.protein_per_unit }} g protein / 1 {{ food.unit }}
+                {{ ingredient.calories_per_unit }} kcal · {{ ingredient.protein_per_unit }} g protein / 1 {{ ingredient.unit }}
               </div>
             </div>
             <Badge variant="outline">

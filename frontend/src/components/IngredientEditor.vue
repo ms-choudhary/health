@@ -1,20 +1,20 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { api } from '@/lib/api'
-import type { Food } from '@/lib/types'
+import type { Ingredient } from '@/lib/types'
 import Dialog from '@/components/ui/Dialog.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 
 const UNITS = ['g', 'ml', 'oz', 'piece', 'tbsp', 'cup', 'serving']
 
-const props = defineProps<{ open: boolean; food: Food | null }>()
+const props = defineProps<{ open: boolean; ingredient: Ingredient | null }>()
 const emit = defineEmits<{
   'update:open': [v: boolean]
   saved: []
 }>()
 
-const isEdit = computed<boolean>(() => props.food != null)
+const isEdit = computed<boolean>(() => props.ingredient != null)
 
 const name = ref<string>('')
 const unit = ref<string>('g')
@@ -27,10 +27,10 @@ const aiLoading = ref<boolean>(false)
 const aiError = ref<string>('')
 
 function reset(): void {
-  name.value = props.food?.name ?? ''
-  unit.value = props.food?.unit ?? 'g'
-  calories.value = props.food != null ? String(props.food.calories_per_unit) : ''
-  protein.value = props.food != null ? String(props.food.protein_per_unit) : ''
+  name.value = props.ingredient?.name ?? ''
+  unit.value = props.ingredient?.unit ?? 'g'
+  calories.value = props.ingredient != null ? String(props.ingredient.calories_per_unit) : ''
+  protein.value = props.ingredient != null ? String(props.ingredient.protein_per_unit) : ''
   errMsg.value = ''
   aiHint.value = ''
   aiError.value = ''
@@ -78,13 +78,13 @@ async function save(): Promise<void> {
   saving.value = true
   errMsg.value = ''
   try {
-    if (props.food != null) {
-      await api.updateFood(props.food.id, {
+    if (props.ingredient != null) {
+      await api.updateIngredient(props.ingredient.id, {
         calories_per_unit: cal,
         protein_per_unit: prot,
       })
     } else {
-      await api.createFood({
+      await api.createIngredient({
         name: name.value.trim(),
         unit: unit.value,
         calories_per_unit: cal,
@@ -94,7 +94,7 @@ async function save(): Promise<void> {
     emit('saved')
     emit('update:open', false)
   } catch (e) {
-    errMsg.value = e instanceof Error ? e.message : 'Failed to save food'
+    errMsg.value = e instanceof Error ? e.message : 'Failed to save ingredient'
   } finally {
     saving.value = false
   }
@@ -104,19 +104,19 @@ async function save(): Promise<void> {
 <template>
   <Dialog
     :open="open"
-    :title="isEdit ? 'Edit food' : 'New food'"
+    :title="isEdit ? 'Edit ingredient' : 'New ingredient'"
     @update:open="(v) => emit('update:open', v)"
   >
     <div class="flex flex-col gap-3">
       <template v-if="isEdit">
         <div>
-          <div class="text-xs text-muted-foreground">Food</div>
+          <div class="text-xs text-muted-foreground">Ingredient</div>
           <div class="font-medium">{{ name }}</div>
         </div>
       </template>
       <template v-else>
         <div class="flex gap-2">
-          <Input v-model="name" placeholder="Food name" class="flex-1" />
+          <Input v-model="name" placeholder="Ingredient name" class="flex-1" />
           <Button
             type="button"
             variant="outline"

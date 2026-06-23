@@ -12,7 +12,42 @@ type DailyMetric struct {
 	Steps  *int64   `json:"steps"`
 }
 
-type Food struct {
+type Exercise struct {
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	Notes     string `json:"notes"`
+	CreatedAt string `json:"created_at"`
+}
+
+type ExerciseSet struct {
+	ID           int64   `json:"id"`
+	UserID       int64   `json:"user_id"`
+	ExerciseID   *int64  `json:"exercise_id"`
+	ExerciseName string  `json:"exercise_name"`
+	Date         string  `json:"date"`
+	Weight       float64 `json:"weight"`
+	Reps         int64   `json:"reps"`
+	Unit         string  `json:"unit"`
+}
+
+type ExerciseTag struct {
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	CreatedAt string `json:"created_at"`
+}
+
+type ExerciseTagging struct {
+	ExerciseID    int64 `json:"exercise_id"`
+	ExerciseTagID int64 `json:"exercise_tag_id"`
+}
+
+type FoodTag struct {
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	CreatedAt string `json:"created_at"`
+}
+
+type Ingredient struct {
 	ID              int64   `json:"id"`
 	Name            string  `json:"name"`
 	Unit            string  `json:"unit"`
@@ -24,16 +59,16 @@ type Food struct {
 type LogEntry struct {
 	ID                   int64    `json:"id"`
 	UserID               int64    `json:"user_id"`
-	FoodID               *int64   `json:"food_id"`
+	IngredientID         *int64   `json:"ingredient_id"`
 	Date                 string   `json:"date"`
-	FoodName             string   `json:"food_name"`
-	FoodUnit             string   `json:"food_unit"`
+	IngredientName       string   `json:"ingredient_name"`
+	IngredientUnit       string   `json:"ingredient_unit"`
 	CaloriesPerUnit      float64  `json:"calories_per_unit"`
 	ProteinPerUnit       float64  `json:"protein_per_unit"`
 	Quantity             float64  `json:"quantity"`
 	Calories             float64  `json:"calories"`
 	Protein              float64  `json:"protein"`
-	SourceRecipeID       *int64   `json:"source_recipe_id"`
+	RecipeGroupID        *int64   `json:"recipe_group_id"`
 	SourceRecipeName     *string  `json:"source_recipe_name"`
 	SourceRecipeServings *float64 `json:"source_recipe_servings"`
 }
@@ -44,11 +79,16 @@ type Recipe struct {
 	CreatedAt string `json:"created_at"`
 }
 
+type RecipeFoodTag struct {
+	RecipeID  int64 `json:"recipe_id"`
+	FoodTagID int64 `json:"food_tag_id"`
+}
+
 type RecipeIngredient struct {
-	ID       int64   `json:"id"`
-	RecipeID int64   `json:"recipe_id"`
-	FoodID   int64   `json:"food_id"`
-	Quantity float64 `json:"quantity"`
+	ID           int64   `json:"id"`
+	RecipeID     int64   `json:"recipe_id"`
+	IngredientID int64   `json:"ingredient_id"`
+	Quantity     float64 `json:"quantity"`
 }
 
 type User struct {

@@ -27,8 +27,8 @@ func Init(path string) (*DB, error) {
 	if _, err := conn.Exec("PRAGMA foreign_keys = ON"); err != nil {
 		return nil, fmt.Errorf("exec pragma foreign_keys: %w", err)
 	}
-	if err := ensureColumn(conn, "log_entries", "source_recipe_id", "INTEGER"); err != nil {
-		return nil, fmt.Errorf("migrate log_entries.source_recipe_id: %w", err)
+	if err := ensureColumn(conn, "log_entries", "recipe_group_id", "INTEGER"); err != nil {
+		return nil, fmt.Errorf("migrate log_entries.recipe_group_id: %w", err)
 	}
 	if err := ensureColumn(conn, "log_entries", "source_recipe_name", "TEXT"); err != nil {
 		return nil, fmt.Errorf("migrate log_entries.source_recipe_name: %w", err)
@@ -42,8 +42,8 @@ func Init(path string) (*DB, error) {
 	if err := ensureColumn(conn, "users", "target_protein", "INTEGER NOT NULL DEFAULT 0"); err != nil {
 		return nil, fmt.Errorf("migrate users.target_protein: %w", err)
 	}
-	if err := ensureColumn(conn, "foods", "protein_per_unit", "REAL NOT NULL DEFAULT 0"); err != nil {
-		return nil, fmt.Errorf("migrate foods.protein_per_unit: %w", err)
+	if err := ensureColumn(conn, "ingredients", "protein_per_unit", "REAL NOT NULL DEFAULT 0"); err != nil {
+		return nil, fmt.Errorf("migrate ingredients.protein_per_unit: %w", err)
 	}
 	if err := ensureColumn(conn, "log_entries", "protein_per_unit", "REAL NOT NULL DEFAULT 0"); err != nil {
 		return nil, fmt.Errorf("migrate log_entries.protein_per_unit: %w", err)
