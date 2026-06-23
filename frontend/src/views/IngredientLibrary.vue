@@ -123,8 +123,22 @@ function onIngredientSaved(): void {
   void loadIngredients()
 }
 
-async function deleteIngredient(id: number): Promise<void> {
-  if (!confirm('Delete this ingredient from the library?')) return
+async function deleteIngredient(id: number, name: string): Promise<void> {
+  let usedIn: { id: number; name: string }[] = []
+  try {
+    usedIn = await api.recipesByIngredient(id)
+  } catch {
+    // If the lookup fails, fall back to a plain confirmation below.
+  }
+
+  let message = `"${name}" is used in 0 recipes`
+  if (usedIn.length > 0) {
+    const list = usedIn.map((r) => `• ${r.name}`).join('\n')
+    message =
+      `"${name}" is used in ${usedIn.length} recipe${usedIn.length === 1 ? '' : 's'}:\n\n${list}\n`
+  }
+  if (!confirm(message)) return
+
   try {
     await api.deleteIngredient(id)
     await loadIngredients()
@@ -207,7 +221,7 @@ onMounted(() => {
             <Button variant="ghost" size="icon" @click="openEditIngredient(f)">
               <Pencil class="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" @click="deleteIngredient(f.id)">
+            <Button variant="ghost" size="icon" @click="deleteIngredient(f.id, f.name)">
               <Trash2 class="h-4 w-4" />
             </Button>
           </div>

@@ -131,6 +131,23 @@ func (h *Handler) UpdateIngredient(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, ingredient)
 }
 
+func (h *Handler) GetRecipesByIngredient(w http.ResponseWriter, r *http.Request) {
+	id, err := parseID(r, "id")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	recipes, err := h.Q.GetRecipesByIngredient(r.Context(), id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if recipes == nil {
+		recipes = []queries.GetRecipesByIngredientRow{}
+	}
+	writeJSON(w, http.StatusOK, recipes)
+}
+
 func (h *Handler) DeleteIngredient(w http.ResponseWriter, r *http.Request) {
 	id, err := parseID(r, "id")
 	if err != nil {

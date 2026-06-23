@@ -132,6 +132,42 @@ func (q *Queries) GetRecipeIngredients(ctx context.Context, recipeID int64) ([]G
 	return items, nil
 }
 
+const getRecipesByIngredient = `-- name: GetRecipesByIngredient :many
+SELECT DISTINCT r.id, r.name
+FROM recipes r
+JOIN recipe_ingredients ri ON ri.recipe_id = r.id
+WHERE ri.ingredient_id = ?
+ORDER BY r.name
+`
+
+type GetRecipesByIngredientRow struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+}
+
+func (q *Queries) GetRecipesByIngredient(ctx context.Context, ingredientID int64) ([]GetRecipesByIngredientRow, error) {
+	rows, err := q.db.QueryContext(ctx, getRecipesByIngredient, ingredientID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetRecipesByIngredientRow
+	for rows.Next() {
+		var i GetRecipesByIngredientRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listRecipes = `-- name: ListRecipes :many
 SELECT
   r.id,

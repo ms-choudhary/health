@@ -11,6 +11,7 @@ import type {
   UpdateUserPayload,
   Recipe,
   RecipeListItem,
+  RecipeRef,
   RecipeWithIngredients,
   RecipePayload,
   LogRecipePayload,
@@ -78,6 +79,8 @@ export const api = {
     }),
   deleteIngredient: (id: number) =>
     request<void>(`${BASE}/ingredients/${id}`, { method: 'DELETE' }),
+  recipesByIngredient: (id: number) =>
+    request<RecipeRef[]>(`${BASE}/ingredients/${id}/recipes`),
 
   getLog: (userId: number) =>
     request<LogEntry[]>(`${BASE}/users/${userId}/log`),

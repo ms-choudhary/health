@@ -102,6 +102,12 @@ export interface RecipeListItem extends Recipe {
   food_tags: FoodTag[]
 }
 
+// Minimal recipe reference (id + name), e.g. recipes that use a given ingredient.
+export interface RecipeRef {
+  id: number
+  name: string
+}
+
 export interface RecipeIngredient {
   id: number
   recipe_id: number

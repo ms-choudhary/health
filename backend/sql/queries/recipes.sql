@@ -39,6 +39,13 @@ JOIN ingredients f ON f.id = ri.ingredient_id
 WHERE ri.recipe_id = ?
 ORDER BY ri.id;
 
+-- name: GetRecipesByIngredient :many
+SELECT DISTINCT r.id, r.name
+FROM recipes r
+JOIN recipe_ingredients ri ON ri.recipe_id = r.id
+WHERE ri.ingredient_id = ?
+ORDER BY r.name;
+
 -- name: AddRecipeIngredient :one
 INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity)
 VALUES (?, ?, ?)
