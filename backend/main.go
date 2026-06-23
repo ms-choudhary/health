@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -136,10 +138,55 @@ func cors(next http.Handler) http.Handler {
 	})
 }
 
+// respRecorder wraps http.ResponseWriter to capture the status code and, for
+// error responses, a copy of the response body so failures can be logged.
+type respRecorder struct {
+	http.ResponseWriter
+	status  int
+	capture bool
+	body    bytes.Buffer
+}
+
+func (rr *respRecorder) WriteHeader(code int) {
+	rr.status = code
+	rr.capture = code >= http.StatusBadRequest
+	rr.ResponseWriter.WriteHeader(code)
+}
+
+func (rr *respRecorder) Write(b []byte) (int, error) {
+	if rr.status == 0 {
+		rr.status = http.StatusOK
+	}
+	if rr.capture {
+		rr.body.Write(b)
+	}
+	return rr.ResponseWriter.Write(b)
+}
+
 func logRequest(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		next.ServeHTTP(w, r)
-		log.Printf("%s %s %s", r.Method, r.URL.Path, time.Since(start))
+		rec := &respRecorder{ResponseWriter: w}
+
+		defer func() {
+			if v := recover(); v != nil {
+				log.Printf("PANIC %s %s: %v\n%s", r.Method, r.URL.Path, v, debug.Stack())
+				if rec.status == 0 {
+					rec.ResponseWriter.Header().Set("Content-Type", "application/json")
+					rec.ResponseWriter.WriteHeader(http.StatusInternalServerError)
+					_, _ = rec.ResponseWriter.Write([]byte(`{"error":"internal server error"}`))
+				}
+			}
+		}()
+
+		next.ServeHTTP(rec, r)
+
+		dur := time.Since(start)
+		if rec.status >= http.StatusBadRequest {
+			log.Printf("ERROR %s %s -> %d (%s): %s",
+				r.Method, r.URL.Path, rec.status, dur, strings.TrimSpace(rec.body.String()))
+		} else {
+			log.Printf("%s %s %d %s", r.Method, r.URL.Path, rec.status, dur)
+		}
 	})
 }
