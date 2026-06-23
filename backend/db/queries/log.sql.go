@@ -14,9 +14,9 @@ INSERT INTO log_entries
   (user_id, ingredient_id, date, ingredient_name, ingredient_unit,
    calories_per_unit, protein_per_unit,
    quantity, calories, protein,
-   source_recipe_id, source_recipe_name, source_recipe_servings)
+   recipe_group_id, source_recipe_name, source_recipe_servings)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, user_id, ingredient_id, date, ingredient_name, ingredient_unit, calories_per_unit, protein_per_unit, quantity, calories, protein, source_recipe_id, source_recipe_name, source_recipe_servings
+RETURNING id, user_id, ingredient_id, date, ingredient_name, ingredient_unit, calories_per_unit, protein_per_unit, quantity, calories, protein, recipe_group_id, source_recipe_name, source_recipe_servings
 `
 
 type AddLogEntryParams struct {
@@ -30,7 +30,7 @@ type AddLogEntryParams struct {
 	Quantity             float64  `json:"quantity"`
 	Calories             float64  `json:"calories"`
 	Protein              float64  `json:"protein"`
-	SourceRecipeID       *int64   `json:"source_recipe_id"`
+	RecipeGroupID        *int64   `json:"recipe_group_id"`
 	SourceRecipeName     *string  `json:"source_recipe_name"`
 	SourceRecipeServings *float64 `json:"source_recipe_servings"`
 }
@@ -47,7 +47,7 @@ func (q *Queries) AddLogEntry(ctx context.Context, arg AddLogEntryParams) (LogEn
 		arg.Quantity,
 		arg.Calories,
 		arg.Protein,
-		arg.SourceRecipeID,
+		arg.RecipeGroupID,
 		arg.SourceRecipeName,
 		arg.SourceRecipeServings,
 	)
@@ -64,28 +64,28 @@ func (q *Queries) AddLogEntry(ctx context.Context, arg AddLogEntryParams) (LogEn
 		&i.Quantity,
 		&i.Calories,
 		&i.Protein,
-		&i.SourceRecipeID,
+		&i.RecipeGroupID,
 		&i.SourceRecipeName,
 		&i.SourceRecipeServings,
 	)
 	return i, err
 }
 
-const deleteLogEntriesByRecipe = `-- name: DeleteLogEntriesByRecipe :exec
+const deleteLogEntriesByGroup = `-- name: DeleteLogEntriesByGroup :exec
 DELETE FROM log_entries
 WHERE user_id = ?1
   AND date    = ?2
-  AND source_recipe_id = ?3
+  AND recipe_group_id = ?3
 `
 
-type DeleteLogEntriesByRecipeParams struct {
-	UserID         int64  `json:"user_id"`
-	Date           string `json:"date"`
-	SourceRecipeID *int64 `json:"source_recipe_id"`
+type DeleteLogEntriesByGroupParams struct {
+	UserID        int64  `json:"user_id"`
+	Date          string `json:"date"`
+	RecipeGroupID *int64 `json:"recipe_group_id"`
 }
 
-func (q *Queries) DeleteLogEntriesByRecipe(ctx context.Context, arg DeleteLogEntriesByRecipeParams) error {
-	_, err := q.db.ExecContext(ctx, deleteLogEntriesByRecipe, arg.UserID, arg.Date, arg.SourceRecipeID)
+func (q *Queries) DeleteLogEntriesByGroup(ctx context.Context, arg DeleteLogEntriesByGroupParams) error {
+	_, err := q.db.ExecContext(ctx, deleteLogEntriesByGroup, arg.UserID, arg.Date, arg.RecipeGroupID)
 	return err
 }
 
@@ -104,7 +104,7 @@ func (q *Queries) DeleteLogEntry(ctx context.Context, arg DeleteLogEntryParams) 
 }
 
 const getLogHistory = `-- name: GetLogHistory :many
-SELECT id, user_id, ingredient_id, date, ingredient_name, ingredient_unit, calories_per_unit, protein_per_unit, quantity, calories, protein, source_recipe_id, source_recipe_name, source_recipe_servings FROM log_entries
+SELECT id, user_id, ingredient_id, date, ingredient_name, ingredient_unit, calories_per_unit, protein_per_unit, quantity, calories, protein, recipe_group_id, source_recipe_name, source_recipe_servings FROM log_entries
 WHERE user_id = ?
 ORDER BY date DESC, id
 `
@@ -130,7 +130,7 @@ func (q *Queries) GetLogHistory(ctx context.Context, userID int64) ([]LogEntry, 
 			&i.Quantity,
 			&i.Calories,
 			&i.Protein,
-			&i.SourceRecipeID,
+			&i.RecipeGroupID,
 			&i.SourceRecipeName,
 			&i.SourceRecipeServings,
 		); err != nil {

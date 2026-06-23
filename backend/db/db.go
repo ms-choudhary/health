@@ -27,8 +27,8 @@ func Init(path string) (*DB, error) {
 	if _, err := conn.Exec("PRAGMA foreign_keys = ON"); err != nil {
 		return nil, fmt.Errorf("exec pragma foreign_keys: %w", err)
 	}
-	if err := ensureColumn(conn, "log_entries", "source_recipe_id", "INTEGER"); err != nil {
-		return nil, fmt.Errorf("migrate log_entries.source_recipe_id: %w", err)
+	if err := ensureColumn(conn, "log_entries", "recipe_group_id", "INTEGER"); err != nil {
+		return nil, fmt.Errorf("migrate log_entries.recipe_group_id: %w", err)
 	}
 	if err := ensureColumn(conn, "log_entries", "source_recipe_name", "TEXT"); err != nil {
 		return nil, fmt.Errorf("migrate log_entries.source_recipe_name: %w", err)

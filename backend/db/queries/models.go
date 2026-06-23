@@ -68,7 +68,7 @@ type LogEntry struct {
 	Quantity             float64  `json:"quantity"`
 	Calories             float64  `json:"calories"`
 	Protein              float64  `json:"protein"`
-	SourceRecipeID       *int64   `json:"source_recipe_id"`
+	RecipeGroupID        *int64   `json:"recipe_group_id"`
 	SourceRecipeName     *string  `json:"source_recipe_name"`
 	SourceRecipeServings *float64 `json:"source_recipe_servings"`
 }

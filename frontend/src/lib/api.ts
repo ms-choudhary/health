@@ -94,9 +94,9 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
-  deleteLogRecipeGroup: (userId: number, date: string, sourceRecipeId: number) =>
+  deleteLogRecipeGroup: (userId: number, date: string, recipeGroupId: number) =>
     request<void>(
-      `${BASE}/users/${userId}/log/recipe?date=${date}&source_recipe_id=${sourceRecipeId}`,
+      `${BASE}/users/${userId}/log/recipe?date=${date}&recipe_group_id=${recipeGroupId}`,
       { method: 'DELETE' },
     ),
 

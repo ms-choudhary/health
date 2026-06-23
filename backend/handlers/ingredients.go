@@ -119,7 +119,7 @@ func (h *Handler) UpdateIngredient(w http.ResponseWriter, r *http.Request) {
 	if err := q.RestampLogEntriesForIngredient(r.Context(), queries.RestampLogEntriesForIngredientParams{
 		CaloriesPerUnit: body.CaloriesPerUnit,
 		ProteinPerUnit:  body.ProteinPerUnit,
-		IngredientID:          &ingredientID,
+		IngredientID:    &ingredientID,
 	}); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return

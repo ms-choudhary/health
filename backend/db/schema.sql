@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS log_entries (
   quantity            REAL NOT NULL,
   calories            REAL NOT NULL,
   protein             REAL NOT NULL DEFAULT 0,
-  source_recipe_id    INTEGER,
+  recipe_group_id            INTEGER,
   source_recipe_name  TEXT,
   source_recipe_servings REAL
 );
@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS daily_metrics (
 );
 
 CREATE INDEX IF NOT EXISTS idx_log_user_date            ON log_entries(user_id, date);
-CREATE INDEX IF NOT EXISTS idx_log_source_recipe        ON log_entries(source_recipe_id);
+CREATE INDEX IF NOT EXISTS idx_log_recipe_group               ON log_entries(recipe_group_id);
 CREATE INDEX IF NOT EXISTS idx_metrics_user_date        ON daily_metrics(user_id, date);
 CREATE INDEX IF NOT EXISTS idx_recipe_ingredients_recipe ON recipe_ingredients(recipe_id);
 CREATE INDEX IF NOT EXISTS idx_recipe_food_tags_food_tag ON recipe_food_tags(food_tag_id);

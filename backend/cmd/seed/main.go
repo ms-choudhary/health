@@ -76,7 +76,7 @@ func main() {
 	}
 	type seedRecipeIngredient struct {
 		ingredientName string
-		quantity float64
+		quantity       float64
 	}
 	type seedRecipe struct {
 		name        string
@@ -146,9 +146,9 @@ func main() {
 				log.Fatalf("seed recipe ingredient %q not found", ing.ingredientName)
 			}
 			if _, err := q.AddRecipeIngredient(ctx, queries.AddRecipeIngredientParams{
-				RecipeID: recipe.ID,
-				IngredientID:   ingredient.ID,
-				Quantity: ing.quantity,
+				RecipeID:     recipe.ID,
+				IngredientID: ingredient.ID,
+				Quantity:     ing.quantity,
 			}); err != nil {
 				log.Fatal(err)
 			}
@@ -207,6 +207,9 @@ func main() {
 
 	rng := rand.New(rand.NewSource(42))
 	today := time.Now().UTC()
+	// Monotonic, timestamp-like group id; one per logged recipe event so each
+	// renders as its own group.
+	groupSeq := today.UnixNano()
 	for _, u := range createdUsers {
 		baseWeight := 70.0 + rng.Float64()*15
 		for d := 13; d >= 0; d-- {
@@ -230,16 +233,18 @@ func main() {
 					continue
 				}
 				servings := 1.0 + float64(rng.Intn(2))
+				groupID := groupSeq
+				groupSeq++
+				rname := recipe.Name
 				for _, ing := range ings {
 					qty := ing.Quantity * servings
-					rid, rname := recipe.ID, recipe.Name
 					if _, err := q.AddLogEntry(ctx, queries.AddLogEntryParams{
 						UserID: u.ID, IngredientID: &ing.IngredientID, Date: date,
 						IngredientName: ing.IngredientName, IngredientUnit: ing.IngredientUnit,
 						CaloriesPerUnit: ing.CaloriesPerUnit, ProteinPerUnit: ing.ProteinPerUnit,
 						Quantity: qty,
 						Calories: ing.CaloriesPerUnit * qty, Protein: ing.ProteinPerUnit * qty,
-						SourceRecipeID: &rid, SourceRecipeName: &rname, SourceRecipeServings: &servings,
+						RecipeGroupID: &groupID, SourceRecipeName: &rname, SourceRecipeServings: &servings,
 					}); err != nil {
 						log.Fatal(err)
 					}

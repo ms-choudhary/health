@@ -48,7 +48,7 @@ func main() {
 	mux.HandleFunc("DELETE /api/ingredients/{id}", h.DeleteIngredient)
 
 	mux.HandleFunc("GET /api/users/{id}/log", h.GetLog)
-	mux.HandleFunc("DELETE /api/users/{id}/log/recipe", h.DeleteLogEntriesByRecipe)
+	mux.HandleFunc("DELETE /api/users/{id}/log/recipe", h.DeleteLogEntriesByGroup)
 	mux.HandleFunc("POST /api/users/{id}/log/recipe", h.LogRecipe)
 	mux.HandleFunc("POST /api/users/{id}/log/custom-recipe", h.LogCustomRecipe)
 	mux.HandleFunc("DELETE /api/users/{id}/log/{eid}", h.DeleteLogEntry)

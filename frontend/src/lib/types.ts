@@ -28,7 +28,7 @@ export interface LogEntry {
   quantity: number
   calories: number
   protein: number
-  source_recipe_id: number | null
+  recipe_group_id: number | null
   source_recipe_name: string | null
   source_recipe_servings: number | null
 }

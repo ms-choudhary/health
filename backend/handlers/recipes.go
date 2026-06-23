@@ -5,13 +5,14 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"health/db/queries"
 )
 
 type ingredientInput struct {
-	IngredientID   int64   `json:"ingredient_id"`
-	Quantity float64 `json:"quantity"`
+	IngredientID int64   `json:"ingredient_id"`
+	Quantity     float64 `json:"quantity"`
 }
 
 type recipeBody struct {
@@ -174,9 +175,9 @@ func (h *Handler) CreateRecipe(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, ing := range ingredients {
 		if _, err := q.AddRecipeIngredient(r.Context(), queries.AddRecipeIngredientParams{
-			RecipeID: recipe.ID,
-			IngredientID:   ing.IngredientID,
-			Quantity: ing.Quantity,
+			RecipeID:     recipe.ID,
+			IngredientID: ing.IngredientID,
+			Quantity:     ing.Quantity,
 		}); err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
@@ -238,9 +239,9 @@ func (h *Handler) UpdateRecipe(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, ing := range ingredients {
 		if _, err := q.AddRecipeIngredient(r.Context(), queries.AddRecipeIngredientParams{
-			RecipeID: id,
-			IngredientID:   ing.IngredientID,
-			Quantity: ing.Quantity,
+			RecipeID:     id,
+			IngredientID: ing.IngredientID,
+			Quantity:     ing.Quantity,
 		}); err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
@@ -329,24 +330,27 @@ func (h *Handler) LogRecipe(w http.ResponseWriter, r *http.Request) {
 		_ = tx.Rollback()
 	}()
 	q := h.Q.WithTx(tx)
+	// Unique group id per log event (a unix timestamp) so logging the same recipe
+	// more than once on a day yields separate groups, each with its own serving
+	// count, rather than merging into one.
+	groupID := time.Now().UnixNano()
+	recipeName := recipe.Name
 	out := make([]queries.LogEntry, 0, len(ings))
 	for _, ing := range ings {
 		ingredientID := ing.IngredientID
-		recipeID := recipe.ID
-		recipeName := recipe.Name
 		qty := ing.Quantity * body.Servings
 		entry, err := q.AddLogEntry(r.Context(), queries.AddLogEntryParams{
 			UserID:               userID,
-			IngredientID:               &ingredientID,
+			IngredientID:         &ingredientID,
 			Date:                 body.Date,
-			IngredientName:             ing.IngredientName,
-			IngredientUnit:             ing.IngredientUnit,
+			IngredientName:       ing.IngredientName,
+			IngredientUnit:       ing.IngredientUnit,
 			CaloriesPerUnit:      ing.CaloriesPerUnit,
 			ProteinPerUnit:       ing.ProteinPerUnit,
 			Quantity:             qty,
 			Calories:             ing.CaloriesPerUnit * qty,
 			Protein:              ing.ProteinPerUnit * qty,
-			SourceRecipeID:       &recipeID,
+			RecipeGroupID:        &groupID,
 			SourceRecipeName:     &recipeName,
 			SourceRecipeServings: &body.Servings,
 		})

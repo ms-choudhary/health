@@ -47,7 +47,7 @@ func (h *Handler) DeleteLogEntry(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *Handler) DeleteLogEntriesByRecipe(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) DeleteLogEntriesByGroup(w http.ResponseWriter, r *http.Request) {
 	userID, err := parseID(r, "id")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
@@ -58,15 +58,15 @@ func (h *Handler) DeleteLogEntriesByRecipe(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusBadRequest, "date must be YYYY-MM-DD")
 		return
 	}
-	srid, err := strconv.ParseInt(r.URL.Query().Get("source_recipe_id"), 10, 64)
-	if err != nil || srid == 0 {
-		writeError(w, http.StatusBadRequest, "source_recipe_id required")
+	groupID, err := strconv.ParseInt(r.URL.Query().Get("recipe_group_id"), 10, 64)
+	if err != nil || groupID == 0 {
+		writeError(w, http.StatusBadRequest, "recipe_group_id required")
 		return
 	}
-	if err := h.Q.DeleteLogEntriesByRecipe(r.Context(), queries.DeleteLogEntriesByRecipeParams{
-		UserID:         userID,
-		Date:           date,
-		SourceRecipeID: &srid,
+	if err := h.Q.DeleteLogEntriesByGroup(r.Context(), queries.DeleteLogEntriesByGroupParams{
+		UserID:        userID,
+		Date:          date,
+		RecipeGroupID: &groupID,
 	}); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -125,10 +125,10 @@ func (h *Handler) LogCustomRecipe(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Synthetic, negative group id: unique per recipe, never collides with a real
-	// (positive auto-increment) recipe id, so a custom recipe can't merge with a real
-	// recipe group logged on the same day.
-	groupID := -time.Now().UnixNano()
+	// Unique group id per log event (a unix timestamp), shared by every ingredient
+	// of this custom recipe so they render as one group, distinct from any other
+	// log event on the same day.
+	groupID := time.Now().UnixNano()
 	groupName := name
 
 	tx, err := h.DB.BeginTx(r.Context(), nil)
@@ -152,7 +152,7 @@ func (h *Handler) LogCustomRecipe(w http.ResponseWriter, r *http.Request) {
 			Quantity:             it.Quantity,
 			Calories:             it.CaloriesPerUnit * it.Quantity,
 			Protein:              it.ProteinPerUnit * it.Quantity,
-			SourceRecipeID:       &groupID,
+			RecipeGroupID:        &groupID,
 			SourceRecipeName:     &groupName,
 			SourceRecipeServings: nil,
 		})

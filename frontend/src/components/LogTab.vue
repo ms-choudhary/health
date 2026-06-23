@@ -12,7 +12,7 @@ import { Plus, Trash2 } from 'lucide-vue-next'
 type Sub = 'food' | 'exercises'
 
 interface RecipeGroup {
-  recipeId: number
+  recipeGroupId: number
   recipeName: string
   servings: number | null
   entries: LogEntry[]
@@ -50,7 +50,7 @@ const days = computed<DayLog[]>(() => {
   const byDate = new Map<string, DayLog>()
   const order: string[] = []
   for (const e of entries.value) {
-    if (e.source_recipe_id == null) continue
+    if (e.recipe_group_id == null) continue
     let day = byDate.get(e.date)
     if (!day) {
       day = {
@@ -63,10 +63,10 @@ const days = computed<DayLog[]>(() => {
       byDate.set(e.date, day)
       order.push(e.date)
     }
-    let g = day.groups.find((x) => x.recipeId === e.source_recipe_id)
+    let g = day.groups.find((x) => x.recipeGroupId === e.recipe_group_id)
     if (!g) {
       g = {
-        recipeId: e.source_recipe_id,
+        recipeGroupId: e.recipe_group_id,
         recipeName: e.source_recipe_name ?? 'Recipe',
         servings: e.source_recipe_servings,
         entries: [],
@@ -122,11 +122,11 @@ async function loadSets(): Promise<void> {
   }
 }
 
-async function removeRecipeGroup(date: string, recipeId: number, name: string): Promise<void> {
+async function removeRecipeGroup(date: string, recipeGroupId: number, name: string): Promise<void> {
   if (!confirm(`Remove "${name}" from this day's log?`)) return
-  await api.deleteLogRecipeGroup(props.userId, date, recipeId)
+  await api.deleteLogRecipeGroup(props.userId, date, recipeGroupId)
   entries.value = entries.value.filter(
-    (e) => !(e.date === date && e.source_recipe_id === recipeId),
+    (e) => !(e.date === date && e.recipe_group_id === recipeGroupId),
   )
 }
 
@@ -192,7 +192,7 @@ onMounted(loadLog)
                 </tr>
               </thead>
               <tbody>
-                <template v-for="g in day.groups" :key="`r-${day.date}-${g.recipeId}`">
+                <template v-for="g in day.groups" :key="`r-${day.date}-${g.recipeGroupId}`">
                   <tr class="border-b border-border bg-muted/40">
                     <td class="px-3 py-2">
                       <div class="flex items-center gap-2">
@@ -210,7 +210,7 @@ onMounted(loadLog)
                     <td class="text-right px-3 py-2 font-medium font-mono">{{ Math.round(g.totalCalories) }}</td>
                     <td class="text-right px-3 py-2 font-medium font-mono">{{ formatNumber(g.totalProtein, 1) }}</td>
                     <td class="px-1">
-                      <Button variant="ghost" size="icon" @click="removeRecipeGroup(day.date, g.recipeId, g.recipeName)">
+                      <Button variant="ghost" size="icon" @click="removeRecipeGroup(day.date, g.recipeGroupId, g.recipeName)">
                         <Trash2 class="h-4 w-4" />
                       </Button>
                     </td>
