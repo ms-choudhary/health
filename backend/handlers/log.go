@@ -63,12 +63,17 @@ func (h *Handler) DeleteLogEntriesByGroup(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusBadRequest, "recipe_group_id required")
 		return
 	}
-	if err := h.Q.DeleteLogEntriesByGroup(r.Context(), queries.DeleteLogEntriesByGroupParams{
+	rows, err := h.Q.DeleteLogEntriesByGroup(r.Context(), queries.DeleteLogEntriesByGroupParams{
 		UserID:        userID,
 		Date:          date,
 		RecipeGroupID: &groupID,
-	}); err != nil {
+	})
+	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if rows == 0 {
+		writeError(w, http.StatusNotFound, "no log entries found for that recipe group")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -125,10 +130,11 @@ func (h *Handler) LogCustomRecipe(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Unique group id per log event (a unix timestamp), shared by every ingredient
-	// of this custom recipe so they render as one group, distinct from any other
-	// log event on the same day.
-	groupID := time.Now().UnixNano()
+	// Unique group id per log event (a unix millisecond timestamp), shared by every
+	// ingredient of this custom recipe so they render as one group, distinct from
+	// any other log event on the same day. Milliseconds keep the id within
+	// JavaScript's safe integer range (nanoseconds overflow it).
+	groupID := time.Now().UnixMilli()
 	groupName := name
 
 	tx, err := h.DB.BeginTx(r.Context(), nil)

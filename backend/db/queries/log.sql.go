@@ -71,7 +71,7 @@ func (q *Queries) AddLogEntry(ctx context.Context, arg AddLogEntryParams) (LogEn
 	return i, err
 }
 
-const deleteLogEntriesByGroup = `-- name: DeleteLogEntriesByGroup :exec
+const deleteLogEntriesByGroup = `-- name: DeleteLogEntriesByGroup :execrows
 DELETE FROM log_entries
 WHERE user_id = ?1
   AND date    = ?2
@@ -84,9 +84,12 @@ type DeleteLogEntriesByGroupParams struct {
 	RecipeGroupID *int64 `json:"recipe_group_id"`
 }
 
-func (q *Queries) DeleteLogEntriesByGroup(ctx context.Context, arg DeleteLogEntriesByGroupParams) error {
-	_, err := q.db.ExecContext(ctx, deleteLogEntriesByGroup, arg.UserID, arg.Date, arg.RecipeGroupID)
-	return err
+func (q *Queries) DeleteLogEntriesByGroup(ctx context.Context, arg DeleteLogEntriesByGroupParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteLogEntriesByGroup, arg.UserID, arg.Date, arg.RecipeGroupID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const deleteLogEntry = `-- name: DeleteLogEntry :exec

@@ -15,7 +15,7 @@ RETURNING *;
 -- name: DeleteLogEntry :exec
 DELETE FROM log_entries WHERE id = ? AND user_id = ?;
 
--- name: DeleteLogEntriesByGroup :exec
+-- name: DeleteLogEntriesByGroup :execrows
 DELETE FROM log_entries
 WHERE user_id = ?1
   AND date    = ?2

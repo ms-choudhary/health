@@ -207,9 +207,9 @@ func main() {
 
 	rng := rand.New(rand.NewSource(42))
 	today := time.Now().UTC()
-	// Monotonic, timestamp-like group id; one per logged recipe event so each
-	// renders as its own group.
-	groupSeq := today.UnixNano()
+	// Monotonic, timestamp-like group id (unix millis, within JS safe-int range);
+	// one per logged recipe event so each renders as its own group.
+	groupSeq := today.UnixMilli()
 	for _, u := range createdUsers {
 		baseWeight := 70.0 + rng.Float64()*15
 		for d := 13; d >= 0; d-- {

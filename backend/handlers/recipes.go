@@ -330,10 +330,11 @@ func (h *Handler) LogRecipe(w http.ResponseWriter, r *http.Request) {
 		_ = tx.Rollback()
 	}()
 	q := h.Q.WithTx(tx)
-	// Unique group id per log event (a unix timestamp) so logging the same recipe
-	// more than once on a day yields separate groups, each with its own serving
-	// count, rather than merging into one.
-	groupID := time.Now().UnixNano()
+	// Unique group id per log event (a unix millisecond timestamp) so logging the
+	// same recipe more than once on a day yields separate groups, each with its
+	// own serving count, rather than merging into one. Milliseconds keep the id
+	// within JavaScript's safe integer range (nanoseconds overflow it).
+	groupID := time.Now().UnixMilli()
 	recipeName := recipe.Name
 	out := make([]queries.LogEntry, 0, len(ings))
 	for _, ing := range ings {
