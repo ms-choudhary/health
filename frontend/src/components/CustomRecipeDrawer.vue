@@ -17,7 +17,12 @@ interface DraftItem {
   quantity: string
 }
 
-const props = defineProps<{ userId: number; date: string }>()
+const props = defineProps<{
+  userId: number
+  date: string
+  // When set, the drawer opens pre-filled from this recipe (the "Customize" flow).
+  prefillRecipeId?: number
+}>()
 const emit = defineEmits<{ close: []; added: [] }>()
 
 const name = ref<string>('')
@@ -25,6 +30,7 @@ const items = ref<DraftItem[]>([])
 const search = ref<string>('')
 const searchResults = ref<Ingredient[]>([])
 const saving = ref<boolean>(false)
+const loadingPrefill = ref<boolean>(false)
 const errMsg = ref<string>('')
 let searchTimer: number | undefined
 
@@ -113,6 +119,27 @@ async function logRecipe(): Promise<void> {
   }
 }
 
+async function loadPrefill(recipeId: number): Promise<void> {
+  loadingPrefill.value = true
+  errMsg.value = ''
+  try {
+    const recipe = await api.getRecipe(recipeId)
+    name.value = recipe.name
+    items.value = recipe.ingredients.map((ing) => ({
+      ingredient_id: ing.ingredient_id,
+      ingredient_name: ing.ingredient_name,
+      ingredient_unit: ing.ingredient_unit,
+      calories_per_unit: ing.calories_per_unit,
+      protein_per_unit: ing.protein_per_unit,
+      quantity: String(ing.quantity),
+    }))
+  } catch (e) {
+    errMsg.value = e instanceof Error ? e.message : 'Failed to load recipe'
+  } finally {
+    loadingPrefill.value = false
+  }
+}
+
 function onKey(e: KeyboardEvent): void {
   if (e.key === 'Escape') emit('close')
 }
@@ -135,6 +162,9 @@ onMounted(() => {
     vv.addEventListener('resize', onViewportChange)
     vv.addEventListener('scroll', onViewportChange)
     onViewportChange()
+  }
+  if (props.prefillRecipeId != null) {
+    void loadPrefill(props.prefillRecipeId)
   }
 })
 
@@ -163,7 +193,9 @@ onUnmounted(() => {
         <div class="mx-auto h-1 w-10 rounded-full bg-border" />
 
         <div class="flex items-center justify-between">
-          <h2 class="font-semibold text-lg">Log a custom recipe</h2>
+          <h2 class="font-semibold text-lg">
+            {{ prefillRecipeId != null ? 'Customize recipe' : 'Log a custom recipe' }}
+          </h2>
           <Button variant="ghost" size="icon" @click="emit('close')">
             <X class="h-4 w-4" />
           </Button>
@@ -242,7 +274,7 @@ onUnmounted(() => {
 
         <div class="flex justify-end gap-2">
           <Button variant="ghost" size="sm" @click="emit('close')">Cancel</Button>
-          <Button size="sm" :disabled="saving" @click="logRecipe">
+          <Button size="sm" :disabled="saving || loadingPrefill" @click="logRecipe">
             {{ saving ? 'Logging…' : 'Log recipe' }}
           </Button>
         </div>

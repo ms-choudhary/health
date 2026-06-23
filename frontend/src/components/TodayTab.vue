@@ -11,6 +11,7 @@ import type {
 } from '@/lib/types'
 import Button from '@/components/ui/Button.vue'
 import AddRecipeDrawer from '@/components/AddRecipeDrawer.vue'
+import CustomRecipeDrawer from '@/components/CustomRecipeDrawer.vue'
 import AddSetsDrawer from '@/components/AddSetsDrawer.vue'
 
 const props = defineProps<{ userId: number }>()
@@ -30,6 +31,9 @@ const loadingItems = ref<boolean>(false)
 
 const showRecipeDrawer = ref<boolean>(false)
 const pickedRecipe = ref<RecipeListItem | null>(null)
+
+const showCustomDrawer = ref<boolean>(false)
+const customizeRecipeId = ref<number | null>(null)
 
 const showSetsDrawer = ref<boolean>(false)
 const pickedExercise = ref<ExerciseWithTags | null>(null)
@@ -70,6 +74,11 @@ function addRecipeToLog(recipe: RecipeListItem): void {
   showRecipeDrawer.value = true
 }
 
+function customizeRecipe(recipe: RecipeListItem): void {
+  customizeRecipeId.value = recipe.id
+  showCustomDrawer.value = true
+}
+
 function addSetsToLog(exercise: ExerciseWithTags): void {
   pickedExercise.value = exercise
   showSetsDrawer.value = true
@@ -78,6 +87,11 @@ function addSetsToLog(exercise: ExerciseWithTags): void {
 function onRecipeAdded(): void {
   showRecipeDrawer.value = false
   pickedRecipe.value = null
+}
+
+function onCustomized(): void {
+  showCustomDrawer.value = false
+  customizeRecipeId.value = null
 }
 
 function onSetsAdded(): void {
@@ -127,7 +141,10 @@ onMounted(loadTags)
               </span>
             </div>
           </div>
-          <Button size="sm" @click="addRecipeToLog(r)">Add to log</Button>
+          <div class="flex flex-col gap-2 shrink-0">
+            <Button size="sm" @click="addRecipeToLog(r)">Add to log</Button>
+            <Button size="sm" variant="secondary" @click="customizeRecipe(r)">Customize</Button>
+          </div>
         </div>
       </div>
     </template>
@@ -229,6 +246,15 @@ onMounted(loadTags)
     :recipe="pickedRecipe"
     @close="showRecipeDrawer = false"
     @added="onRecipeAdded"
+  />
+
+  <CustomRecipeDrawer
+    v-if="showCustomDrawer && customizeRecipeId != null"
+    :user-id="userId"
+    :date="today"
+    :prefill-recipe-id="customizeRecipeId"
+    @close="showCustomDrawer = false"
+    @added="onCustomized"
   />
 
   <AddSetsDrawer
